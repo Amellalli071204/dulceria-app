@@ -66,6 +66,7 @@ export default function Admin() {
           <tr style={{ background: '#ff4757', color: 'white' }}>
             <th style={{ padding: '10px' }}>Fecha</th>
             <th>Cliente</th>
+            <th>Teléfono</th>
             <th>Total</th>
             <th>Método</th>
             <th>Estado</th>
@@ -76,6 +77,12 @@ export default function Admin() {
             <tr key={order._id} style={{ borderBottom: '1px solid #ddd', textAlign: 'center' }}>
               <td style={{ padding: '10px' }}>{new Date(order.fecha).toLocaleDateString()}</td>
               <td>{order.usuario}</td>
+              {/* NUEVA CELDA: Con link para llamar directamente */}
+            <td>
+                <a href={`tel:${order.telefono}`} style={{ color: '#007bff', textDecoration: 'none' }}>
+                    {order.telefono || 'Sin número'}
+                </a>
+            </td>
               <td>${order.total}</td>
               <td style={{ fontWeight: 'bold', color: order.metodoPago === 'efectivo' ? 'green' : 'blue' }}>
                 {(order.metodoPago || 'N/A').toUpperCase()}
