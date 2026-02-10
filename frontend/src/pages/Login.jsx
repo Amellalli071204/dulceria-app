@@ -3,10 +3,9 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
-  const [isRegister, setIsRegister] = useState(false); // ¿Está registrándose?
+  const [isRegister, setIsRegister] = useState(false);
   const navigate = useNavigate();
 
-  // Estado del formulario
   const [formData, setFormData] = useState({
     nombre: '', email: '', password: '', telefono: ''
   });
@@ -17,20 +16,22 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // URL de tu Backend (asegúrate que el backend esté corriendo en el puerto 3001)
     const apiUrl = import.meta.env.VITE_API_URL;
     const url = isRegister ? `${apiUrl}/api/auth/register` : `${apiUrl}/api/auth/login`;
+    
     try {
       const res = await axios.post(url, formData);
       
       if (!isRegister) {
-        // Si es Login, guardamos el token y redirigimos
+        // --- GUARDADO DE DATOS DEL USUARIO ---
         localStorage.setItem('token', res.data.token);
-        localStorage.setItem('isAdmin', res.data.isAdmin);
-        alert('¡Bienvenido!');
+        localStorage.setItem('isAdmin', res.data.user.isAdmin);
+        localStorage.setItem('userName', res.data.user.nombre); // Guardamos nombre
+        localStorage.setItem('userPhone', res.data.user.telefono); // Guardamos teléfono
+        
+        alert(`¡Bienvenido/a, ${res.data.user.nombre}! 🍬`);
         navigate('/catalogo');
       } else {
-        // Si es Registro, avisamos y cambiamos a Login
         alert('Registro exitoso. Ahora inicia sesión.');
         setIsRegister(false);
       }
@@ -46,7 +47,6 @@ export default function Login() {
       </h2>
       
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        
         {isRegister && (
           <>
             <input name="nombre" placeholder="Nombre completo" onChange={handleChange} required style={inputStyle} />
@@ -75,6 +75,5 @@ export default function Login() {
   );
 }
 
-// Estilos simples
 const inputStyle = { padding: '10px', borderRadius: '5px', border: '1px solid #ddd' };
 const buttonStyle = { padding: '10px', background: '#ff4757', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '1rem' };

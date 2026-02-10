@@ -6,7 +6,7 @@ import axios from 'axios';
 // Extraemos la URL de nuestra variable de entorno
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// ⚠️ Pon tu PUBLIC KEY real de Mercado Pago aquí para que funcione en producción
+// ⚠️ Usando tu Public Key de producción configurada
 initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
 
 export default function Cart() {
@@ -16,7 +16,6 @@ export default function Cart() {
   // Lógica para Mercado Pago
   const handleMercadoPago = async () => {
     try {
-      // Usamos ${apiUrl} en lugar de localhost
       const res = await axios.post(`${apiUrl}/api/orders/create_preference`, {
         items: cart.map(item => ({
           nombre: item.nombre,
@@ -31,20 +30,31 @@ export default function Cart() {
     }
   };
 
-  // Lógica para Pago en Efectivo (One Push)
+  // Lógica para Pago en Efectivo (One Push) CORREGIDA
   const handleCashPayment = async () => {
-    const userId = localStorage.getItem('token');
-    if (!userId) return alert("Inicia sesión para pedir.");
+    const token = localStorage.getItem('token');
+    
+    // --- RECUPERAMOS DATOS REALES DEL USUARIO ---
+    const nombreCliente = localStorage.getItem('userName') || "Cliente Desconocido";
+    const telefonoCliente = localStorage.getItem('userPhone') || "Sin teléfono";
+
+    if (!token) return alert("Inicia sesión para pedir.");
 
     try {
-      // Usamos ${apiUrl} en lugar de localhost
       await axios.post(`${apiUrl}/api/orders`, {
-        usuario: "Cliente Registrado",
-        productos: cart.map(i => ({ productoId: i._id, nombre: i.nombre, cantidad: i.qty, precio: i.precio })),
+        usuario: nombreCliente, // Ahora envía el nombre real
+        telefono: telefonoCliente, // Ahora envía el teléfono real
+        productos: cart.map(i => ({ 
+          productoId: i._id, 
+          nombre: i.nombre, 
+          cantidad: i.qty, 
+          precio: i.precio 
+        })),
         total: totalPrice,
         metodoPago: 'efectivo'
       });
-      alert('¡Pedido registrado! Prepara tu efectivo para la entrega.');
+      
+      alert(`¡Pedido registrado! Gracias ${nombreCliente}, prepararemos tus dulces. Te contactaremos al ${telefonoCliente}.`);
     } catch (error) {
       console.error(error);
       alert("Error al registrar pedido");
