@@ -7,7 +7,7 @@ import axios from 'axios';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 // ⚠️ Pon tu PUBLIC KEY real de Mercado Pago aquí para que funcione en producción
-initMercadoPago('APP_USR-6528078084306221-102120-7f3e57e1b30f7b3fc4d4329d82c77fdf-1357502298', { locale: 'es-MX' });
+initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
 
 export default function Cart() {
   const { cart, updateQty, removeFromCart, totalPrice, totalItems } = useCart();
