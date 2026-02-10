@@ -1,9 +1,21 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { FaShoppingCart, FaUserLock, FaStore } from 'react-icons/fa'; // Iconos bonitos
+import { FaShoppingCart, FaUserLock, FaStore, FaSignOutAlt } from 'react-icons/fa';
 
 export default function Navbar() {
   const { totalItems } = useCart();
+  const navigate = useNavigate();
+
+  // Verificamos si hay sesión activa y si es admin
+  const token = localStorage.getItem('token');
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+
+  const handleLogout = () => {
+    localStorage.clear(); // Borra token, nombre, teléfono e isAdmin
+    alert("Sesión cerrada. ¡Vuelve pronto! 🍬");
+    navigate('/login');
+    window.location.reload(); // Recarga para limpiar estados globales
+  };
 
   return (
     <nav style={{ 
@@ -11,11 +23,11 @@ export default function Navbar() {
       justifyContent: 'space-between', 
       alignItems: 'center',
       padding: '1rem 2rem', 
-      background: '#ff4757', // Un rojo tipo dulcería
+      background: '#ff4757', 
       color: 'white',
       boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
     }}>
-      {/* Logo / Nombre */}
+      {/* Logo */}
       <Link to="/" style={{ textDecoration: 'none', color: 'white', fontSize: '1.5rem', fontWeight: 'bold' }}>
         🍬 Dulcería App
       </Link>
@@ -25,11 +37,21 @@ export default function Navbar() {
         
         <Link to="/catalogo" style={linkStyle}><FaStore/> Catálogo</Link>
         
-        <Link to="/admin" style={linkStyle}><FaUserLock/> Admin</Link>
+        {/* Solo mostramos Admin si el usuario es administrador */}
+        {isAdmin && (
+          <Link to="/admin" style={linkStyle}><FaUserLock/> Admin</Link>
+        )}
         
         <Link to="/carrito" style={{ ...linkStyle, background: 'white', color: '#ff4757', padding: '5px 15px', borderRadius: '20px' }}>
            <FaShoppingCart/> Carrito <span style={{ fontWeight: 'bold', marginLeft: '5px' }}>{totalItems}</span>
         </Link>
+
+        {/* Botón de Logout: solo aparece si hay un token activo */}
+        {token && (
+          <button onClick={handleLogout} style={logoutButtonStyle}>
+            <FaSignOutAlt/> Salir
+          </button>
+        )}
       </div>
     </nav>
   );
@@ -44,29 +66,15 @@ const linkStyle = {
   gap: '5px'
 };
 
-const handleLogout = () => {
-  // 1. Borramos absolutamente todo lo guardado
-  localStorage.clear(); 
-  
-  // 2. Avisamos al usuario
-  alert("Sesión cerrada. ¡Vuelve pronto por más dulces! 🍬");
-  
-  // 3. Redirigimos al inicio o al login
-  window.location.href = "/login";
+const logoutButtonStyle = {
+  background: 'rgba(255, 255, 255, 0.2)',
+  color: 'white',
+  border: '1px solid white',
+  padding: '5px 12px',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px',
+  fontSize: '1rem'
 };
-
-// En tu parte de retorno (JSX)
-<button 
-  onClick={handleLogout} 
-  style={{
-    background: '#ff4757',
-    color: 'white',
-    border: 'none',
-    padding: '8px 15px',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontWeight: 'bold'
-  }}
->
-  Cerrar Sesión 🚪
-</button>
