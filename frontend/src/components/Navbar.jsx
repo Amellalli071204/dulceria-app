@@ -29,7 +29,7 @@ export default function Navbar() {
     }}>
       {/* Logo */}
       <Link to="/" style={{ textDecoration: 'none', color: 'white', fontSize: '1.5rem', fontWeight: 'bold' }}>
-        🍬 Dulcería App
+        🍬 Dulce Mundo 
       </Link>
 
       {/* Enlaces */}
