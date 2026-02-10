@@ -7,18 +7,17 @@ const cors = require('cors');
 const app = express();
 
 // --- MIDDLEWARES ---
-// Permite que el frontend (React) se comunique con este backend
-// --- MIDDLEWARES ---
-// Configuración de CORS para autorizar tu página de Railway
-const corsOptions = {
+const cors = require('cors'); // Asegúrate de que esta línea esté arriba con los otros require
+
+app.use(cors({
   origin: [
-    'http://localhost:5173', 
+    'http://localhost:5173',
     'https://humorous-nourishment-production.up.railway.app'
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
-};
+}));
+
+app.use(express.json());
 
 app.use(cors(corsOptions)); 
 
