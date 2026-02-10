@@ -17,16 +17,25 @@ export default function Admin() {
   }, []);
 
   const fetchOrders = async () => {
-    const res = await axios.get('http://localhost:3001/api/orders');
+    const apiUrl = import.meta.env.VITE_API_URL;
+
+// Busca la parte donde haces el PO
     setOrders(res.data);
   };
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    await axios.post('http://localhost:3001/api/products', newProduct);
-    alert('Dulce agregado al catálogo');
-    setNewProduct({ nombre: '', descripcion: '', precio: 0, imagen: '' }); // Limpiar form
-  };
+
+    try {
+    await axios.post(`${apiUrl}/api/products`, newProduct, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    alert("¡Dulce agregado con éxito! 🍬");
+  } catch (error) {
+    console.error(error);
+    alert("Error al guardar el producto");
+  }
+};
 
   return (
     <div style={{ padding: '2rem' }}>
