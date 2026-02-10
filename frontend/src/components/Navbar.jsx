@@ -43,3 +43,30 @@ const linkStyle = {
   alignItems: 'center',
   gap: '5px'
 };
+
+const handleLogout = () => {
+  // 1. Borramos absolutamente todo lo guardado
+  localStorage.clear(); 
+  
+  // 2. Avisamos al usuario
+  alert("Sesión cerrada. ¡Vuelve pronto por más dulces! 🍬");
+  
+  // 3. Redirigimos al inicio o al login
+  window.location.href = "/login";
+};
+
+// En tu parte de retorno (JSX)
+<button 
+  onClick={handleLogout} 
+  style={{
+    background: '#ff4757',
+    color: 'white',
+    border: 'none',
+    padding: '8px 15px',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontWeight: 'bold'
+  }}
+>
+  Cerrar Sesión 🚪
+</button>
