@@ -6,15 +6,14 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const navigate = useNavigate();
 
-  // Verificamos si hay sesión activa y si es admin
   const token = localStorage.getItem('token');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   const handleLogout = () => {
-    localStorage.clear(); // Borra token, nombre, teléfono e isAdmin
-    alert("Sesión cerrada. ¡Vuelve pronto! 🍬");
+    localStorage.clear();
+    alert("¡Vuelve pronto a Dulce Mundo! 🍬");
     navigate('/login');
-    window.location.reload(); // Recarga para limpiar estados globales
+    window.location.reload();
   };
 
   return (
@@ -22,31 +21,38 @@ export default function Navbar() {
       display: 'flex', 
       justifyContent: 'space-between', 
       alignItems: 'center',
-      padding: '1rem 2rem', 
-      background: '#ff4757', 
+      padding: '0.8rem 2rem', 
+      background: '#E91E63', // Rosa vibrante del logo
       color: 'white',
-      boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+      boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
     }}>
-      {/* Logo */}
-      <Link to="/" style={{ textDecoration: 'none', color: 'white', fontSize: '1.5rem', fontWeight: 'bold' }}>
-        🍬 Dulce Mundo 
+      {/* Logo e Imagen */}
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'white' }}>
+        <img 
+          src="/logo.png" 
+          alt="Logo Dulce Mundo" 
+          style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white' }} 
+        />
+        <span style={{ fontSize: '1.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>
+          Dulce Mundo
+        </span>
       </Link>
 
       {/* Enlaces */}
-      <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
         
         <Link to="/catalogo" style={linkStyle}><FaStore/> Catálogo</Link>
         
-        {/* Solo mostramos Admin si el usuario es administrador */}
         {isAdmin && (
-          <Link to="/admin" style={linkStyle}><FaUserLock/> Admin</Link>
+          <Link to="/admin" style={{ ...linkStyle, color: '#FFEB3B' }}><FaUserLock/> Admin</Link>
         )}
         
-        <Link to="/carrito" style={{ ...linkStyle, background: 'white', color: '#ff4757', padding: '5px 15px', borderRadius: '20px' }}>
-           <FaShoppingCart/> Carrito <span style={{ fontWeight: 'bold', marginLeft: '5px' }}>{totalItems}</span>
+        <Link to="/carrito" style={cartButtonStyle}>
+           <FaShoppingCart/> 
+           <span>Carrito</span>
+           <span style={badgeStyle}>{totalItems}</span>
         </Link>
 
-        {/* Botón de Logout: solo aparece si hay un token activo */}
         {token && (
           <button onClick={handleLogout} style={logoutButtonStyle}>
             <FaSignOutAlt/> Salir
@@ -57,24 +63,45 @@ export default function Navbar() {
   );
 }
 
+// --- ESTILOS PERSONALIZADOS CON LA PALETA DEL LOGO ---
 const linkStyle = {
   textDecoration: 'none',
   color: 'white',
-  fontSize: '1.1rem',
+  fontSize: '1.05rem',
   display: 'flex',
   alignItems: 'center',
-  gap: '5px'
+  gap: '6px',
+  transition: '0.3s'
+};
+
+const cartButtonStyle = {
+  ...linkStyle,
+  background: '#9C27B0', // Púrpura del logo
+  padding: '6px 15px',
+  borderRadius: '25px',
+  boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+};
+
+const badgeStyle = {
+  background: 'white',
+  color: '#9C27B0',
+  borderRadius: '50%',
+  padding: '2px 7px',
+  fontSize: '0.9rem',
+  fontWeight: 'bold',
+  marginLeft: '5px'
 };
 
 const logoutButtonStyle = {
-  background: 'rgba(255, 255, 255, 0.2)',
+  background: 'transparent',
   color: 'white',
-  border: '1px solid white',
+  border: '1px solid rgba(255,255,255,0.5)',
   padding: '5px 12px',
   borderRadius: '5px',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   gap: '5px',
-  fontSize: '1rem'
+  fontSize: '0.9rem',
+  transition: '0.3s'
 };
