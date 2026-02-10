@@ -5,7 +5,7 @@ const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 // CONFIGURACIÓN MERCADO PAGO
 // (Usa tu ACCESS_TOKEN real de Mercado Pago aquí o en el .env)
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || 'TEST-tu-token-aqui' });
+const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
 // 1. CREAR PREFERENCIA (Para botón de Mercado Pago)
 router.post('/create_preference', async (req, res) => {
@@ -18,9 +18,9 @@ router.post('/create_preference', async (req, res) => {
                 currency_id: 'MXN',
             })),
             back_urls: {
-                success: "http://localhost:5173/success", // Cambiarás esto cuando subas a producción
-                failure: "http://localhost:5173/failure",
-                pending: "http://localhost:5173/pending",
+            success: "https://humorous-nourishment-production.up.railway.app/success",
+            failure: "https://humorous-nourishment-production.up.railway.app/failure",
+            pending: "https://humorous-nourishment-production.up.railway.app/pending"
             },
             auto_return: "approved",
         };
