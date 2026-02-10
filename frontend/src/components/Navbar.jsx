@@ -22,14 +22,14 @@ export default function Navbar() {
       justifyContent: 'space-between', 
       alignItems: 'center',
       padding: '0.8rem 2rem', 
-      background: '#E91E63', // Rosa vibrante del logo
+      background: '#f36caf', // Rosa vibrante del logo
       color: 'white',
       boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
     }}>
       {/* Logo e Imagen */}
       <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'white' }}>
         <img 
-          src="/logo.png" 
+          public="/logo.png" 
           alt="Logo Dulce Mundo" 
           style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white' }} 
         />
