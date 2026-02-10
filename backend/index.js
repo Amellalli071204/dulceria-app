@@ -7,8 +7,7 @@ const cors = require('cors');
 const app = express();
 
 // --- MIDDLEWARES ---
-const cors = require('cors'); // Asegúrate de que esta línea esté arriba con los otros require
-
+// Borra cualquier línea de "const cors" que esté aquí adentro
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -18,8 +17,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-app.use(cors(corsOptions)); 
 
 // Permite que el servidor entienda los datos en formato JSON
 app.use(express.json());
