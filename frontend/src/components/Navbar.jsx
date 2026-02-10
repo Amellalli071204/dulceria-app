@@ -29,7 +29,7 @@ export default function Navbar() {
       {/* Logo e Imagen */}
       <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'white' }}>
         <img 
-          public="/logo.jpg" 
+          src="/logo.jpg" 
           alt="Logo Dulce Mundo" 
           style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white' }} 
         />
