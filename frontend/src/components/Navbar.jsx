@@ -34,7 +34,7 @@ export default function Navbar() {
           style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white' }} 
         />
         <span style={{ fontSize: '1.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>
-          Dulce Mundo
+          Dulce Mundo 🍭
         </span>
       </Link>
 
