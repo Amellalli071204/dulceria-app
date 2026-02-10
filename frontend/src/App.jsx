@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
-import Catalog from './pages/Catalog';
+import Catalog from './pages/Catalogo';
 import Cart from './pages/Cart';
 import Admin from './pages/Admin';
 
