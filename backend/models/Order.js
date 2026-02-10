@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const OrderSchema = new mongoose.Schema({
   usuario: { type: String, required: true }, // Guardaremos el ID o Nombre del usuario
+  telefono: { type: String, default: "Sin número" },
   productos: [
     {
       productoId: String,
