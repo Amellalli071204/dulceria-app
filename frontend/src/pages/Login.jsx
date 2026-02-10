@@ -18,10 +18,8 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // URL de tu Backend (asegúrate que el backend esté corriendo en el puerto 3001)
-    const url = isRegister 
-      ? 'http://localhost:3001/api/auth/register' 
-      : 'http://localhost:3001/api/auth/login';
-
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const url = isRegister ? `${apiUrl}/api/auth/register` : `${apiUrl}/api/auth/login`;
     try {
       const res = await axios.post(url, formData);
       

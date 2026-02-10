@@ -8,7 +8,8 @@ export default function Catalog() {
 
   // Cargar productos al iniciar la página
   useEffect(() => {
-    axios.get('http://localhost:3001/api/products')
+    const apiUrl = import.meta.env.VITE_API_URL;
+    axios.get(`${apiUrl}/api/products`)
       .then(res => setProducts(res.data))
       .catch(err => console.error(err));
   }, []);
