@@ -8,9 +8,22 @@ const app = express();
 
 // --- MIDDLEWARES ---
 // Permite que el frontend (React) se comunique con este backend
-app.use(cors()); 
+// --- MIDDLEWARES ---
+// Configuración de CORS para autorizar tu página de Railway
+const corsOptions = {
+  origin: [
+    'http://localhost:5173', 
+    'https://humorous-nourishment-production.up.railway.app'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions)); 
+
 // Permite que el servidor entienda los datos en formato JSON
-app.use(express.json()); 
+app.use(express.json());
 
 // --- CONEXIÓN A BASE DE DATOS ---
 const mongoUri = process.env.MONGO_URI;
