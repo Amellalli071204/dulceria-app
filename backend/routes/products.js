@@ -14,9 +14,9 @@ router.get('/', async (req, res) => {
 
 // AGREGAR PRODUCTO (Para el Admin)
 router.post('/', async (req, res) => {
-    const { nombre, descripcion, precio, imagen } = req.body;
+    const { nombre, descripcion, precio, imagen, existencias } = req.body;
     try {
-        const newProduct = new Product({ nombre, descripcion, precio, imagen });
+        const newProduct = new Product({ nombre, descripcion, precio, imagen, existencias: existencias || 0 });
         const product = await newProduct.save();
         res.json(product);
     } catch (err) {
