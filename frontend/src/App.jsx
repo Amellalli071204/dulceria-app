@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Catalog from './pages/Catalogo';
 import Cart from './pages/Cart';
 import Admin from './pages/Admin';
+import Footer from './components/Footer';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           </Routes>
           
         </div>
+       <Footer /> 
       </BrowserRouter>
     </CartProvider>
   );
