@@ -3,12 +3,11 @@ export default function Footer() {
     <footer style={footerStyle}>
       <div style={contentStyle}>
         <p style={brandStyle}>Dulce Mundo 🍭</p>
-        <p style={teamTitleStyle}>Desarrollado por el equipo de Ingeniería:</p>
+        <p style={teamTitleStyle}>Desarrollado por:</p>
         <div style={namesGridStyle}>
           <span>Amellalli</span>
           <span>Juan Carlos</span>
-          <span>Fernando</span>
-          <span>Jonatan</span>
+          <span>José</span>
         </div>
         <p style={copyrightStyle}>© 2026 UMB Atenco - Todos los derechos reservados</p>
       </div>
