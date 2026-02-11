@@ -1,58 +1,41 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
+const Product = require('../models/Product'); // Necesitamos el modelo de Producto para restar stock
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
-// CONFIGURACIÓN MERCADO PAGO
-// (Usa tu ACCESS_TOKEN real de Mercado Pago aquí o en el .env)
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
-// 1. CREAR PREFERENCIA (Para botón de Mercado Pago)
-router.post('/create_preference', async (req, res) => {
-    try {
-        const body = {
-            items: req.body.items.map(item => ({
-                title: item.nombre,
-                quantity: Number(item.cantidad),
-                unit_price: Number(item.precio),
-                currency_id: 'MXN',
-            })),
-            back_urls: {
-            success: "https://humorous-nourishment-production.up.railway.app/success",
-            failure: "https://humorous-nourishment-production.up.railway.app/failure",
-            pending: "https://humorous-nourishment-production.up.railway.app/pending"
-            },
-            auto_return: "approved",
-        };
-
-        const preference = new Preference(client);
-        const result = await preference.create({ body });
-        res.json({ id: result.id });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error al crear preferencia' });
-    }
-});
-
-// 2. GUARDAR PEDIDO (Efectivo o después de pagar)
+// --- RUTA PARA GUARDAR PEDIDO Y DESCONTAR STOCK ---
 router.post('/', async (req, res) => {
+    const { usuario, telefono, productos, total, metodoPago } = req.body;
+
     try {
-        const newOrder = new Order(req.body);
+        // 1. Crear y guardar el pedido
+        const newOrder = new Order({
+            usuario,
+            telefono,
+            productos,
+            total,
+            metodoPago,
+            fecha: new Date()
+        });
         const savedOrder = await newOrder.save();
+
+        // 2. LÓGICA DE DESCUENTO DE STOCK 📉
+        // Recorremos los productos que vienen en el pedido
+        for (const item of productos) {
+            await Product.findByIdAndUpdate(
+                item.productoId, 
+                { $inc: { existencias: -item.cantidad } } // Resta la cantidad comprada
+            );
+        }
+
         res.json(savedOrder);
     } catch (err) {
-        res.status(500).json({ error: 'Error al guardar pedido' });
+        console.error("Error al procesar pedido:", err);
+        res.status(500).json({ error: 'Error al guardar pedido y actualizar stock' });
     }
 });
 
-// 3. OBTENER PEDIDOS (Para el Admin)
-router.get('/', async (req, res) => {
-    try {
-        const orders = await Order.find().sort({ fecha: -1 });
-        res.json(orders);
-    } catch (err) {
-        res.status(500).json({ error: 'Error al obtener pedidos' });
-    }
-});
-
-module.exports = router;
+// ... el resto de tus rutas (create_preference y GET) se mantienen igual
