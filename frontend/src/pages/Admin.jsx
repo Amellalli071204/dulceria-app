@@ -58,6 +58,13 @@ export default function Admin() {
           <FaPlusCircle /> Agregar Nuevo Dulce
         </h2>
         <form onSubmit={handleAddProduct} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+          <input 
+  type="number" 
+  placeholder="Cantidad inicial (Existencias)" 
+  value={newProduct.existencias}
+  onChange={(e) => setNewProduct({...newProduct, existencias: e.target.value})}
+  style={inputStyle} // Usa el estilo que ya tienes para los otros inputs
+/>
           <input style={inputStyle} placeholder="Nombre del dulce" value={newProduct.nombre} onChange={e => setNewProduct({...newProduct, nombre: e.target.value})} required />
           <input style={inputStyle} placeholder="Descripción" value={newProduct.descripcion} onChange={e => setNewProduct({...newProduct, descripcion: e.target.value})} />
           <input style={inputStyle} type="number" placeholder="Precio" value={newProduct.precio} onChange={e => setNewProduct({...newProduct, precio: e.target.value})} required />
