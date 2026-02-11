@@ -12,6 +12,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173',
     'https://humorous-nourishment-production.up.railway.app'
+    'https://humorous-nourishment-production.up.railway.app/'
   ],
   credentials: true
 }));
