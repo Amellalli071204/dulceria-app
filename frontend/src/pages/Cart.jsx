@@ -2,19 +2,21 @@ import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 const apiUrl = import.meta.env.VITE_API_URL;
+
+// Inicialización de Mercado Pago con tu llave de producción
 initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
 
 export default function Cart() {
+  // Extraemos las funciones del context, incluyendo clearCart para vaciarlo al final
   const { cart, updateQty, removeFromCart, totalPrice, totalItems, clearCart } = useCart();
   const [preferenceId, setPreferenceId] = useState(null);
   
-  // CANDADO DE SEGURIDAD: Evita pedidos múltiples
+  // ESTADO DE SEGURIDAD: Bloquea el botón para evitar duplicados
   const [isProcessing, setIsProcessing] = useState(false);
-  const navigate = useNavigate();
 
+  // Lógica para Mercado Pago
   const handleMercadoPago = async () => {
     try {
       const res = await axios.post(`${apiUrl}/api/orders/create_preference`, {
@@ -26,34 +28,32 @@ export default function Cart() {
       });
       setPreferenceId(res.data.id);
     } catch (error) {
-      console.error(error);
+      console.error("Error MP:", error);
       alert("Error al conectar con Mercado Pago");
     }
   };
 
+  // Lógica para Pago en Efectivo (One Push) PROTEGIDA
   const handleCashPayment = async () => {
-    // 1. BLOQUEO INMEDIATO: Si ya se está procesando, ignora clics extra
+    // 1. Candado inmediato contra clics repetidos
     if (isProcessing) return;
 
     const token = localStorage.getItem('token');
     if (!token) return alert("Inicia sesión para pedir.");
 
-    // 2. VALIDACIÓN DE STOCK: Verifica existencias antes de enviar
+    // 2. Validación de Stock antes de enviar la petición
     const sinStock = cart.find(item => item.qty > (item.existencias || 0));
     if (sinStock) {
-      return alert(`❌ ¡Uy! Solo tenemos ${sinStock.existencias} piezas de ${sinStock.nombre}.`);
+      return alert(`❌ Stock insuficiente: Solo tenemos ${sinStock.existencias} de ${sinStock.nombre}.`);
     }
 
-    setIsProcessing(true); // Activamos el estado de carga
-
-    const nombreCliente = localStorage.getItem('userName') || "Cliente Desconocido";
-    const telefonoCliente = localStorage.getItem('userPhone') || "Sin teléfono";
+    setIsProcessing(true); // Bloqueamos el flujo
 
     try {
-      // 3. ENVIAR PEDIDO: Esperamos la respuesta del servidor
+      // 3. Petición al servidor esperando respuesta confirmada
       const res = await axios.post(`${apiUrl}/api/orders`, {
-        usuario: nombreCliente,
-        telefono: telefonoCliente,
+        usuario: localStorage.getItem('userName') || "Cliente",
+        telefono: localStorage.getItem('userPhone') || "Sin teléfono",
         productos: cart.map(i => ({ 
           productoId: i._id, 
           nombre: i.nombre, 
@@ -64,18 +64,25 @@ export default function Cart() {
         metodoPago: 'efectivo'
       });
       
-      // Solo si el servidor responde con éxito, procedemos
+      // 4. Si el servidor responde con éxito (200 o 201)
       if (res.status === 200 || res.status === 201) {
-        alert(`✅ ¡Pedido registrado! Gracias ${nombreCliente}.`);
-        clearCart(); // 4. LIMPIEZA: Vaciamos el carrito
-        navigate('/catalogo'); 
+        alert("✅ ¡Pedido registrado! Tu carrito se limpiará ahora.");
+        
+        // Verificamos que clearCart sea una función antes de llamarla
+        if (typeof clearCart === 'function') {
+          clearCart();
+        }
+
+        // Redirección forzada para limpiar el estado visual
+        setTimeout(() => {
+          window.location.href = "/catalogo";
+        }, 500);
       }
     } catch (error) {
-      // Si hay un error, lo atrapamos aquí sin registrar el éxito
       console.error("Error al registrar:", error);
-      alert("Hubo un error al registrar tu pedido. Por favor, intenta de nuevo.");
+      alert("Hubo un error al procesar tu pedido. Intenta de nuevo.");
     } finally {
-      setIsProcessing(false); // Liberamos el botón al final
+      setIsProcessing(false); // Liberamos el botón si hubo error
     }
   };
 
@@ -94,7 +101,7 @@ export default function Cart() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button onClick={() => updateQty(item._id, -1)}>-</button>
             <span style={{ fontWeight: item.qty > item.existencias ? 'bold' : 'normal', color: item.qty > item.existencias ? 'red' : 'black' }}>
-              {item.qty}
+               {item.qty}
             </span>
             <button onClick={() => updateQty(item._id, 1)} disabled={item.qty >= item.existencias}>+</button>
             <button onClick={() => removeFromCart(item._id)} style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer', padding: '5px 10px', borderRadius: '4px' }}>X</button>
@@ -115,14 +122,14 @@ export default function Cart() {
 
         <button 
           onClick={handleCashPayment} 
-          disabled={isProcessing} 
+          disabled={isProcessing}
           style={{ 
             ...btnCashStyle, 
             background: isProcessing ? '#95a5a6' : '#2ecc71',
             cursor: isProcessing ? 'not-allowed' : 'pointer'
           }}
         >
-          {isProcessing ? "⏳ Procesando pedido..." : "💵 Pagar en Efectivo (One Push)"}
+          {isProcessing ? "⏳ Procesando..." : "💵 Pagar en Efectivo (One Push)"}
         </button>
       </div>
     </div>
