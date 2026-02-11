@@ -2,24 +2,19 @@ import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // Para redirigir tras la compra
+import { useNavigate } from 'react-router-dom';
 
-// Extraemos la URL de nuestra variable de entorno
 const apiUrl = import.meta.env.VITE_API_URL;
-
-// ⚠️ Usando tu Public Key de producción configurada
 initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
 
 export default function Cart() {
-  // Traemos 'clearCart' para vaciar el carrito después de pagar
   const { cart, updateQty, removeFromCart, totalPrice, totalItems, clearCart } = useCart();
   const [preferenceId, setPreferenceId] = useState(null);
   
-  // ESTADO PARA EL CANDADO: Evita pedidos duplicados
+  // CANDADO DE SEGURIDAD: Evita pedidos múltiples
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
 
-  // Lógica para Mercado Pago
   const handleMercadoPago = async () => {
     try {
       const res = await axios.post(`${apiUrl}/api/orders/create_preference`, {
@@ -36,27 +31,27 @@ export default function Cart() {
     }
   };
 
-  // Lógica para Pago en Efectivo (One Push) CORREGIDA Y REFORZADA
   const handleCashPayment = async () => {
-    // CANDADO 1: Si ya se está procesando, bloqueamos clics extra
+    // 1. BLOQUEO INMEDIATO: Si ya se está procesando, ignora clics extra
     if (isProcessing) return;
 
     const token = localStorage.getItem('token');
     if (!token) return alert("Inicia sesión para pedir.");
 
-    // CANDADO 2: Validación de existencias antes de enviar
-    const productoSinStock = cart.find(item => item.qty > (item.existencias || 0));
-    if (productoSinStock) {
-      return alert(`¡Lo sentimos! Solo tenemos ${productoSinStock.existencias} piezas de ${productoSinStock.nombre}. Ajusta tu cantidad.`);
+    // 2. VALIDACIÓN DE STOCK: Verifica existencias antes de enviar
+    const sinStock = cart.find(item => item.qty > (item.existencias || 0));
+    if (sinStock) {
+      return alert(`❌ ¡Uy! Solo tenemos ${sinStock.existencias} piezas de ${sinStock.nombre}.`);
     }
 
-    setIsProcessing(true); // Activamos el bloqueo visual y lógico
+    setIsProcessing(true); // Activamos el estado de carga
 
     const nombreCliente = localStorage.getItem('userName') || "Cliente Desconocido";
     const telefonoCliente = localStorage.getItem('userPhone') || "Sin teléfono";
 
     try {
-      await axios.post(`${apiUrl}/api/orders`, {
+      // 3. ENVIAR PEDIDO: Esperamos la respuesta del servidor
+      const res = await axios.post(`${apiUrl}/api/orders`, {
         usuario: nombreCliente,
         telefono: telefonoCliente,
         productos: cart.map(i => ({ 
@@ -69,16 +64,18 @@ export default function Cart() {
         metodoPago: 'efectivo'
       });
       
-      alert(`✅ ¡Pedido registrado! Gracias ${nombreCliente}. Tu pedido está en camino.`);
-      
-      // LIMPIEZA DEL CARRITO tras éxito
-      clearCart(); 
-      navigate('/catalogo'); // Redirigimos para evitar que el usuario intente comprar lo mismo
+      // Solo si el servidor responde con éxito, procedemos
+      if (res.status === 200 || res.status === 201) {
+        alert(`✅ ¡Pedido registrado! Gracias ${nombreCliente}.`);
+        clearCart(); // 4. LIMPIEZA: Vaciamos el carrito
+        navigate('/catalogo'); 
+      }
     } catch (error) {
-      console.error(error);
-      alert("Error al registrar pedido");
+      // Si hay un error, lo atrapamos aquí sin registrar el éxito
+      console.error("Error al registrar:", error);
+      alert("Hubo un error al registrar tu pedido. Por favor, intenta de nuevo.");
     } finally {
-      setIsProcessing(false); // Liberamos el botón si hubo un error para que pueda reintentar
+      setIsProcessing(false); // Liberamos el botón al final
     }
   };
 
@@ -92,16 +89,15 @@ export default function Cart() {
         <div key={item._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc', padding: '10px 0' }}>
           <div>
             <h3>{item.nombre}</h3>
-            <p>${item.precio} c/u | <span style={{color: '#E91E63'}}>Stock: {item.existencias}</span></p>
+            <p>${item.precio} c/u | <span style={{ color: '#E91E63' }}>Disponibles: {item.existencias}</span></p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button onClick={() => updateQty(item._id, -1)}>-</button>
-            <span>{item.qty}</span>
-            <button 
-              onClick={() => updateQty(item._id, 1)} 
-              disabled={item.qty >= item.existencias} // Bloquea el botón '+' si llega al límite de stock
-            >+</button>
-            <button onClick={() => removeFromCart(item._id)} style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer' }}>X</button>
+            <span style={{ fontWeight: item.qty > item.existencias ? 'bold' : 'normal', color: item.qty > item.existencias ? 'red' : 'black' }}>
+              {item.qty}
+            </span>
+            <button onClick={() => updateQty(item._id, 1)} disabled={item.qty >= item.existencias}>+</button>
+            <button onClick={() => removeFromCart(item._id)} style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer', padding: '5px 10px', borderRadius: '4px' }}>X</button>
           </div>
         </div>
       ))}
@@ -112,26 +108,18 @@ export default function Cart() {
         {preferenceId ? (
           <Wallet initialization={{ preferenceId }} customization={{ texts:{ valueProp: 'smart_option'}}} />
         ) : (
-          <button 
-            onClick={handleMercadoPago} 
-            disabled={isProcessing}
-            style={{ padding: '15px', background: '#009ee3', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.6 : 1 }}
-          >
+          <button onClick={handleMercadoPago} disabled={isProcessing} style={btnMPStyle}>
             Pagar con Mercado Pago
           </button>
         )}
 
         <button 
           onClick={handleCashPayment} 
-          disabled={isProcessing} // Desactiva el botón al primer clic
+          disabled={isProcessing} 
           style={{ 
-            padding: '15px', 
-            background: isProcessing ? '#95a5a6' : '#2ecc71', // Se pone gris mientras procesa
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '5px', 
-            fontSize: '1.1rem', 
-            cursor: isProcessing ? 'not-allowed' : 'pointer' 
+            ...btnCashStyle, 
+            background: isProcessing ? '#95a5a6' : '#2ecc71',
+            cursor: isProcessing ? 'not-allowed' : 'pointer'
           }}
         >
           {isProcessing ? "⏳ Procesando pedido..." : "💵 Pagar en Efectivo (One Push)"}
@@ -140,3 +128,6 @@ export default function Cart() {
     </div>
   );
 }
+
+const btnMPStyle = { padding: '15px', background: '#009ee3', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', cursor: 'pointer' };
+const btnCashStyle = { padding: '15px', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', transition: '0.3s' };
