@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar } from 'react-icons/fa'; // Añadimos FaFileInvoiceDollar
+import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-import jsPDF from 'jspdf'; // Importamos jsPDF
-import 'jspdf-autotable'; // Importamos el plugin de tablas
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable'; // 🛠️ Importación corregida
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -27,7 +27,7 @@ export default function Admin() {
         } catch (error) { console.error(error); }
     };
 
-    // --- FUNCIÓN PARA GENERAR TICKET ---
+    // --- FUNCIÓN PARA GENERAR TICKET (CORREGIDA) ---
     const generarTicket = (order) => {
         const doc = new jsPDF();
 
@@ -56,7 +56,8 @@ export default function Admin() {
             `$${(p.cantidad * p.precio).toFixed(2)}`
         ]);
 
-        doc.autoTable({
+        // 🛠️ Uso de autoTable como función independiente
+        autoTable(doc, {
             startY: 75,
             head: [['Producto', 'Cant.', 'Precio U.', 'Subtotal']],
             body: body,
@@ -64,22 +65,18 @@ export default function Admin() {
             theme: 'striped'
         });
 
-        // Total
         const finalY = doc.lastAutoTable.finalY;
         doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
         doc.text(`TOTAL A PAGAR: $${order.total}`, 140, finalY + 15);
 
-        // Pie de página
         doc.setFontSize(10);
         doc.setFont("helvetica", "italic");
         doc.text("¡Gracias por endulzar tu día con nosotros!", 105, finalY + 30, { align: 'center' });
 
-        // Guardar PDF
-        doc.save(`Ticket_${order.usuario}_${Date.now()}.pdf`);
+        doc.save(`Ticket_${order.usuario}.pdf`);
 
-        // Abrir WhatsApp con mensaje
-        const mensaje = `Hola ${order.usuario}, ¡gracias por tu compra en Dulce Mundo! 🍭 Aquí tienes el detalle de tu pedido por $${order.total}. En un momento te envío tu ticket en PDF.`;
+        const mensaje = `Hola ${order.usuario}, ¡gracias por tu compra en Dulce Mundo! 🍭 Aquí tienes tu ticket por $${order.total}.`;
         window.open(`https://wa.me/52${order.telefono.replace(/\s+/g, '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
@@ -87,7 +84,7 @@ export default function Admin() {
         setLoadingId(id);
         try {
             await axios.patch(`${apiUrl}/api/orders/${id}/status`, { nuevoEstado });
-            Swal.fire({ title: 'Estado Actualizado', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+            Swal.fire({ title: 'Actualizado', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
             fetchOrders();
         } catch (error) { Swal.fire('Error', 'No se pudo actualizar', 'error'); }
         finally { setLoadingId(null); }
@@ -144,10 +141,8 @@ export default function Admin() {
                                 <td>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
                                         <span>{order.telefono}</span>
-                                        {/* BOTÓN TICKET */}
                                         <button 
                                             onClick={() => generarTicket(order)}
-                                            title="Generar Ticket PDF"
                                             style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '1.4rem' }}
                                         >
                                             <FaFileInvoiceDollar />
