@@ -39,23 +39,27 @@ router.post('/', async (req, res) => {
     try {
         const { items, total, metodo, estado } = req.body;
 
-        // A. Guardamos el pedido primero
+        // Guardamos la orden
         const newOrder = new Order(req.body);
         const savedOrder = await newOrder.save();
 
-        // B. DESCUENTO DE STOCK: Recorremos los productos del pedido
-        // Usamos un for...of para asegurar que cada actualización termine antes de seguir
-        /*for (const item of items) {
-            await Product.findByIdAndUpdate(
-                item._id, // Asegúrate que desde el front envíes el _id de MongoDB
-                { $inc: { existencias: -Number(item.cantidad) } } // Restamos la cantidad
-            );
-        }*/
+        // Verificamos si hay items antes de intentar el bucle
+        if (items && Array.isArray(items)) {
+            for (const item of items) {
+                // Solo intentamos actualizar si el item tiene ID
+                if (item._id) {
+                    await Product.findByIdAndUpdate(
+                        item._id, 
+                        { $inc: { existencias: -Number(item.cantidad || 0) } } 
+                    );
+                }
+            }
+        }
 
-        res.json({ message: "Pedido guardado e inventario actualizado", order: savedOrder });
+        res.json({ message: "Pedido guardado", order: savedOrder });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Error al guardar pedido y actualizar stock' });
+        console.error("ERROR CRÍTICO EN ORDERS:", err); // Esto saldrá en Railway
+        res.status(500).json({ error: 'Error interno en el servidor' });
     }
 });
 
