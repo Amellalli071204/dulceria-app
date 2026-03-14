@@ -1,23 +1,21 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaWhatsapp, FaPlusCircle, FaBoxOpen } from 'react-icons/fa';
+import Swal from 'sweetalert2'; // 🍬 Importamos SweetAlert2
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function Admin() {
     const [orders, setOrders] = useState([]);
+    const [loadingId, setLoadingId] = useState(null);
     const [newProduct, setNewProduct] = useState({ 
-        nombre: '', 
-        descripcion: '', 
-        precio: '', 
-        imagen: '', 
-        existencias: '' 
+        nombre: '', descripcion: '', precio: '', imagen: '', existencias: '' 
     });
 
     useEffect(() => {
         const isAdmin = localStorage.getItem('isAdmin') === 'true';
         if (!isAdmin) {
-            alert("No tienes permiso para estar aquí");
+            Swal.fire('Acceso denegado', 'No tienes permisos de administrador', 'error');
             window.location.href = "/";
         }
         fetchOrders();
@@ -35,14 +33,30 @@ export default function Admin() {
     };
 
     const handleUpdateStatus = async (id, nuevoEstado) => {
+        setLoadingId(id);
         try {
             await axios.patch(`${apiUrl}/api/orders/${id}/status`, 
                 { nuevoEstado }, 
                 { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
             );
-            fetchOrders(); // Recarga la tabla para ver el cambio
+
+            // Notificación elegante tipo Toast
+            Swal.fire({
+                title: `Pedido ${nuevoEstado.toUpperCase()}`,
+                icon: 'success',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true,
+                background: '#FFF0F5'
+            });
+
+            await fetchOrders();
         } catch (error) {
-            alert("Error al actualizar el estado");
+            Swal.fire('Error', 'No se pudo actualizar el estado', 'error');
+        } finally {
+            setLoadingId(null);
         }
     };
 
@@ -52,11 +66,17 @@ export default function Admin() {
             await axios.post(`${apiUrl}/api/products`, newProduct, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
-            alert("¡Dulce agregado con éxito! 🍬");
+            
+            Swal.fire({
+                title: '¡Dulce Guardado!',
+                text: 'El inventario se actualizó correctamente',
+                icon: 'success',
+                confirmButtonColor: '#9C27B0'
+            });
+
             setNewProduct({ nombre: '', descripcion: '', precio: '', imagen: '', existencias: '' });
         } catch (error) {
-            console.error(error);
-            alert("Error al guardar el producto");
+            Swal.fire('Error', 'No se pudo guardar el dulce', 'error');
         }
     };
 
@@ -64,47 +84,17 @@ export default function Admin() {
         <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
             <h1 style={{ color: '#E91E63', textAlign: 'center' }}>Panel de Administración 🔐</h1>
 
-            {/* --- FORMULARIO DE PRODUCTOS (DISEÑO RECUPERADO) --- */}
+            {/* --- FORMULARIO DE PRODUCTOS --- */}
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
                 <h2 style={{ color: '#9C27B0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <FaPlusCircle /> Agregar Nuevo Dulce
                 </h2>
                 <form onSubmit={handleAddProduct} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <input 
-                        style={inputStyle} 
-                        placeholder="Nombre del dulce" 
-                        value={newProduct.nombre} 
-                        onChange={e => setNewProduct({...newProduct, nombre: e.target.value})} 
-                        required 
-                    />
-                    <input 
-                        style={inputStyle} 
-                        type="number" 
-                        placeholder="Existencias iniciales" 
-                        value={newProduct.existencias} 
-                        onChange={e => setNewProduct({...newProduct, existencias: e.target.value})} 
-                        required 
-                    />
-                    <input 
-                        style={inputStyle} 
-                        placeholder="Descripción" 
-                        value={newProduct.descripcion} 
-                        onChange={e => setNewProduct({...newProduct, descripcion: e.target.value})} 
-                    />
-                    <input 
-                        style={inputStyle} 
-                        type="number" 
-                        placeholder="Precio" 
-                        value={newProduct.precio} 
-                        onChange={e => setNewProduct({...newProduct, precio: e.target.value})} 
-                        required 
-                    />
-                    <input 
-                        style={inputStyle} 
-                        placeholder="URL de Imagen" 
-                        value={newProduct.imagen} 
-                        onChange={e => setNewProduct({...newProduct, imagen: e.target.value})} 
-                    />
+                    <input style={inputStyle} placeholder="Nombre del dulce" value={newProduct.nombre} onChange={e => setNewProduct({...newProduct, nombre: e.target.value})} required />
+                    <input style={inputStyle} type="number" placeholder="Existencias iniciales" value={newProduct.existencias} onChange={e => setNewProduct({...newProduct, existencias: e.target.value})} required />
+                    <input style={inputStyle} placeholder="Descripción" value={newProduct.descripcion} onChange={e => setNewProduct({...newProduct, descripcion: e.target.value})} />
+                    <input style={inputStyle} type="number" placeholder="Precio" value={newProduct.precio} onChange={e => setNewProduct({...newProduct, precio: e.target.value})} required />
+                    <input style={inputStyle} placeholder="URL de Imagen" value={newProduct.imagen} onChange={e => setNewProduct({...newProduct, imagen: e.target.value})} />
                     
                     <button type="submit" style={saveButtonStyle}>Guardar en Inventario</button>
                 </form>
@@ -149,28 +139,25 @@ export default function Admin() {
                                 </td>
                                 <td>${order.total}</td>
                                 <td style={{ padding: '10px' }}>
-                                    {/* Lista de productos comprados */}
                                     <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '8px', textAlign: 'left', paddingLeft: '20px' }}>
                                         {order.productos?.map((p, i) => (
                                             <div key={i}>• {p.nombre} ({p.cantidad} pz)</div>
                                         ))}
                                     </div>
-                                    {/* Botón de Estado */}
                                     <button 
                                         onClick={() => handleUpdateStatus(order._id, order.estado === 'pendiente' ? 'pagado' : 'entregado')}
+                                        disabled={loadingId === order._id}
                                         style={{
                                             padding: '6px 12px',
                                             borderRadius: '20px',
                                             border: 'none',
-                                            background: order.estado === 'pendiente' ? '#FFEB3B' : '#C8E6C9',
-                                            color: '#333',
-                                            cursor: 'pointer',
+                                            background: loadingId === order._id ? '#BDBDBD' : (order.estado === 'pendiente' ? '#FFEB3B' : '#C8E6C9'),
+                                            cursor: loadingId === order._id ? 'not-allowed' : 'pointer',
                                             fontSize: '0.75rem',
-                                            fontWeight: 'bold',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                            fontWeight: 'bold'
                                         }}
                                     >
-                                        {order.estado.toUpperCase()}
+                                        {loadingId === order._id ? "⏳" : order.estado.toUpperCase()}
                                     </button>
                                 </td>
                             </tr>
