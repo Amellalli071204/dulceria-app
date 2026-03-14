@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-const Product = require('../models/Product'); // IMPORTANTE: Importamos el modelo de Producto
+//const Product = require('../models/Product'); // IMPORTANTE: Importamos el modelo de Producto
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 // CONFIGURACIÓN MERCADO PAGO
@@ -45,12 +45,12 @@ router.post('/', async (req, res) => {
 
         // B. DESCUENTO DE STOCK: Recorremos los productos del pedido
         // Usamos un for...of para asegurar que cada actualización termine antes de seguir
-        for (const item of items) {
+        /*for (const item of items) {
             await Product.findByIdAndUpdate(
                 item._id, // Asegúrate que desde el front envíes el _id de MongoDB
                 { $inc: { existencias: -Number(item.cantidad) } } // Restamos la cantidad
             );
-        }
+        }*/
 
         res.json({ message: "Pedido guardado e inventario actualizado", order: savedOrder });
     } catch (err) {
