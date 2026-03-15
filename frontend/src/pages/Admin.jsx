@@ -15,6 +15,10 @@ export default function Admin() {
     });
 
     useEffect(() => {
+        const isAdmin = localStorage.getItem('isAdmin') === 'true';
+        if (!isAdmin) {
+            window.location.href = "/";
+        }
         fetchOrders();
     }, []);
 
@@ -27,11 +31,11 @@ export default function Admin() {
         } catch (error) { console.error(error); }
     };
 
-    // --- FUNCIÓN HELPER PARA CARGAR LOGO DESDE /PUBLIC ---
+    // --- LOGICA DEL LOGO (DESDE PUBLIC) ---
     const getLogoBase64 = () => {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.src = '/logo.jpg'; // <-- Aquí busca tu archivo en public
+            img.src = '/logo.jpg'; 
             img.crossOrigin = 'Anonymous';
             img.onload = () => {
                 const canvas = document.createElement('canvas');
@@ -48,13 +52,9 @@ export default function Admin() {
     const generarTicket = async (order) => {
         const doc = new jsPDF();
         try {
-            // Cargar el logo
             const imgData = await getLogoBase64();
-            
-            // Posicionar Logo (centrado)
             doc.addImage(imgData, 'JPEG', 82, 10, 45, 45);
 
-            // Texto de Encabezado
             doc.setFontSize(22);
             doc.setTextColor(233, 30, 99);
             doc.text("Dulce Mundo", 105, 60, { align: 'center' });
@@ -63,7 +63,6 @@ export default function Admin() {
             doc.setTextColor(100);
             doc.text("Santa Isabel Ixtapan, Atenco, Edo. Mex.", 105, 68, { align: 'center' });
 
-            // Datos del Cliente
             doc.setFontSize(12);
             doc.setTextColor(0);
             doc.text(`Cliente: ${order.usuario}`, 20, 80);
@@ -103,13 +102,106 @@ export default function Admin() {
         }
     };
 
-    // ... (Mantén aquí tus funciones handleUpdateStatus y handleAddProduct de la versión anterior)
+    const handleUpdateStatus = async (id, nuevoEstado) => {
+        setLoadingId(id);
+        try {
+            await axios.patch(`${apiUrl}/api/orders/${id}/status`, 
+                { nuevoEstado }, 
+                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+            );
+            Swal.fire({ title: 'Actualizado', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+            fetchOrders();
+        } catch (error) { Swal.fire('Error', 'No se pudo actualizar', 'error'); }
+        finally { setLoadingId(null); }
+    };
+
+    const handleAddProduct = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post(`${apiUrl}/api/products`, newProduct, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            Swal.fire('¡Éxito!', 'Dulce agregado al inventario', 'success');
+            setNewProduct({ nombre: '', descripcion: '', precio: '', imagen: '', existencias: '' });
+        } catch (error) { Swal.fire('Error', 'No se pudo guardar el producto', 'error'); }
+    };
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
-            {/* ... (Mantén aquí el resto del JSX: Formulario y Tabla) */}
+            <h1 style={{ color: '#E91E63', textAlign: 'center' }}>Panel de Administración 🔐</h1>
+
+            {/* --- FORMULARIO --- */}
+            <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                <h2 style={{ color: '#9C27B0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FaPlusCircle /> Agregar Nuevo Dulce
+                </h2>
+                <form onSubmit={handleAddProduct} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <input style={inputStyle} placeholder="Nombre del dulce" value={newProduct.nombre} onChange={e => setNewProduct({...newProduct, nombre: e.target.value})} required />
+                    <input style={inputStyle} type="number" placeholder="Existencias iniciales" value={newProduct.existencias} onChange={e => setNewProduct({...newProduct, existencias: e.target.value})} required />
+                    <input style={inputStyle} placeholder="Descripción" value={newProduct.descripcion} onChange={e => setNewProduct({...newProduct, descripcion: e.target.value})} />
+                    <input style={inputStyle} type="number" placeholder="Precio" value={newProduct.precio} onChange={e => setNewProduct({...newProduct, precio: e.target.value})} required />
+                    <input style={inputStyle} placeholder="URL de Imagen" value={newProduct.imagen} onChange={e => setNewProduct({...newProduct, imagen: e.target.value})} />
+                    <button type="submit" style={saveButtonStyle}>Guardar en Inventario</button>
+                </form>
+            </div>
+
+            {/* --- TABLA --- */}
+            <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FaBoxOpen /> Pedidos Recientes
+            </h2>
+            <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden' }}>
+                    <thead>
+                        <tr style={{ background: '#E91E63', color: 'white' }}>
+                            <th style={{ padding: '15px' }}>Fecha</th>
+                            <th>Cliente</th>
+                            <th>WhatsApp / Ticket</th>
+                            <th>Total</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {orders.map(order => (
+                            <tr key={order._id} style={{ borderBottom: '1px solid #eee', textAlign: 'center' }}>
+                                <td style={{ padding: '12px' }}>{new Date(order.fecha).toLocaleDateString()}</td>
+                                <td style={{ fontWeight: 'bold' }}>{order.usuario}</td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
+                                        <span>{order.telefono}</span>
+                                        <button 
+                                            onClick={() => generarTicket(order)}
+                                            style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '1.4rem' }}
+                                        >
+                                            <FaFileInvoiceDollar />
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>${order.total}</td>
+                                <td style={{ padding: '10px' }}>
+                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '5px' }}>
+                                        {order.productos?.map((p, i) => <div key={i}>{p.nombre} ({p.cantidad})</div>)}
+                                    </div>
+                                    <button 
+                                        onClick={() => handleUpdateStatus(order._id, order.estado === 'pendiente' ? 'pagado' : 'entregado')}
+                                        disabled={loadingId === order._id}
+                                        style={{
+                                            padding: '5px 12px', borderRadius: '20px', border: 'none',
+                                            background: loadingId === order._id ? '#ccc' : (order.estado === 'pendiente' ? '#FFEB3B' : '#C8E6C9'),
+                                            cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold'
+                                        }}
+                                    >
+                                        {loadingId === order._id ? "..." : order.estado.toUpperCase()}
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
 
-// ... Estilos finales (inputStyle y saveButtonStyle)
+// --- ESTILOS ---
+const inputStyle = { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', outline: 'none' };
+const saveButtonStyle = { gridColumn: 'span 2', background: '#9C27B0', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '10px' };
