@@ -16,7 +16,7 @@ function App() {
           
           <Routes>
             {/* Pantalla principal redirige al Login */}
-            <Route path="/" element={<Navigate to="/login" />} />
+            {/* <Route path="/" element={<Navigate to="/login" />} /> */}
             
             <Route path="/login" element={<Login />} />
             <Route path="/catalogo" element={<Catalog />} />

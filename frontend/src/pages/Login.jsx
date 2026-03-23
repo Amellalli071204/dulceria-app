@@ -77,7 +77,7 @@ export default function Login() {
         <input type="password" name="password" placeholder="Tu contraseña" onChange={handleChange} required style={inputStyle} />
         
         <button type="submit" style={buttonStyle}>
-          {isRegister ? 'Registrarme ahora' : 'Iniciar sesion'}
+          {isRegister ? 'Registrarme ahora' : 'Iniciar sesión'}
         </button>
       </form>
 
