@@ -74,10 +74,10 @@ export default function Login() {
         )}
         
         <input type="email" name="email" placeholder="correo@ejemplo.com" onChange={handleChange} required style={inputStyle} />
-        <input type="password" name="password" placeholder="Tu contraseña segura" onChange={handleChange} required style={inputStyle} />
+        <input type="password" name="password" placeholder="Tu contraseña" onChange={handleChange} required style={inputStyle} />
         
         <button type="submit" style={buttonStyle}>
-          {isRegister ? 'Registrarme ahora' : 'Entrar a la tienda'}
+          {isRegister ? 'Registrarme ahora' : 'Iniciar sesion'}
         </button>
       </form>
 
