@@ -3,61 +3,61 @@ export default function Footer() {
     <footer style={footerStyle}>
       <div style={contentStyle}>
         <p style={brandStyle}>Dulce Mundo 🍭</p>
-        <p style={teamTitleStyle}>Desarrollado por:</p>
         <div style={namesGridStyle}>
+          <span style={teamTitleStyle}>Desarrollado por:</span>
           <span>Amellalli</span>
           <span>Juan Carlos</span>
           <span>José</span>
         </div>
-        <p style={copyrightStyle}>© 2026 UMB Atenco - Todos los derechos reservados</p>
+        <p style={copyrightStyle}>© 2026 UMB Atenco</p>
       </div>
     </footer>
   );
 }
 
-// --- ESTILOS ---
+// --- ESTILOS COMPACTOS ---
 const footerStyle = {
-  backgroundColor: '#4A148C', // Morado oscuro para que contraste con el rosa
+  backgroundColor: '#4A148C',
   color: 'white',
-  padding: '40px 20px',
-  marginTop: '50px',
+  padding: '15px 20px', // Reducido de 40px a 15px
+  marginTop: '30px',    // Menos espacio arriba
   textAlign: 'center',
-  borderTop: '5px solid #E91E63' // Línea rosa mexicano arriba
+  borderTop: '3px solid #E91E63' // Línea más delgada (de 5px a 3px)
 };
 
 const contentStyle = {
-  maxWidth: '500px',
+  maxWidth: '600px',
   margin: '0 auto'
 };
 
 const brandStyle = {
-  fontSize: '1.5rem',
+  fontSize: '1.1rem', // Reducido de 1.5rem a 1.1rem
   fontWeight: 'bold',
-  marginBottom: '10px',
-  letterSpacing: '1px'
+  marginBottom: '5px'
 };
 
 const teamTitleStyle = {
-  fontSize: '0.9rem',
-  opacity: '0.8',
-  marginBottom: '15px',
-  textTransform: 'uppercase'
+  fontSize: '0.75rem',
+  opacity: '0.7',
+  textTransform: 'uppercase',
+  marginRight: '10px' // Espacio para que queden en la misma línea
 };
 
 const namesGridStyle = {
   display: 'flex',
   justifyContent: 'center',
-  gap: '20px',
+  alignItems: 'center', // Alineación central
+  gap: '15px',
   flexWrap: 'wrap',
-  fontSize: '1.1rem',
-  fontWeight: '500',
-  marginBottom: '20px'
+  fontSize: '0.85rem', // Fuente más pequeña y discreta
+  fontWeight: '400',
+  marginBottom: '10px'
 };
 
 const copyrightStyle = {
-  fontSize: '0.8rem',
-  opacity: '0.6',
-  marginTop: '20px',
+  fontSize: '0.7rem',
+  opacity: '0.5',
+  marginTop: '10px',
   borderTop: '1px solid rgba(255,255,255,0.1)',
-  paddingTop: '15px'
+  paddingTop: '8px'
 };
