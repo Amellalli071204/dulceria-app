@@ -2,9 +2,6 @@ body {
   background-color: #e7d5d8; /* El tono blanco rosáceo */
   margin: 0;
   font-family: 'Arial', sans-serif;
-}
-/* En tu archivo CSS */
-body {
-  margin: 0;
   padding-top: 90px; /* Esto empuja todo el contenido hacia abajo */
+
 }
