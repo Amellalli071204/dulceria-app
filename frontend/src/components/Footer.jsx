@@ -26,7 +26,7 @@ const footerStyle = {
 };
 
 const contentStyle = {
-  maxWidth: '800px',
+  maxWidth: '500px',
   margin: '0 auto'
 };
 
