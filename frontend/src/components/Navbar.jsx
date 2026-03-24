@@ -17,17 +17,9 @@ export default function Navbar() {
   };
 
   return (
-    <nav style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center',
-      padding: '0.8rem 2rem', 
-      background: '#E91E63', // Rosa vibrante del logo
-      color: 'white',
-      boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
-    }}>
-      {/* Logo e Imagen */}
-      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'white' }}>
+    <nav style={navContainerStyle}>
+      {/* 1. LOGO ESTÁTICO: Cambiado de Link a div para que no sea clickeable */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'default' }}>
         <img 
           src="/logo.jpg" 
           alt="Logo Dulce Mundo" 
@@ -36,7 +28,7 @@ export default function Navbar() {
         <span style={{ fontSize: '1.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>
           Dulce Mundo 🍭
         </span>
-      </Link>
+      </div>
 
       {/* Enlaces */}
       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
@@ -47,11 +39,14 @@ export default function Navbar() {
           <Link to="/admin" style={{ ...linkStyle, color: '#FFEB3B' }}><FaUserLock/> Admin</Link>
         )}
         
-        <Link to="/carrito" style={cartButtonStyle}>
-           <FaShoppingCart/> 
-           <span>Carrito</span>
-           <span style={badgeStyle}>{totalItems}</span>
-        </Link>
+        {/* 2. CARRITO PROTEGIDO: Solo se renderiza si hay un token activo */}
+        {token && (
+          <Link to="/carrito" style={cartButtonStyle}>
+             <FaShoppingCart/> 
+             <span>Carrito</span>
+             <span style={badgeStyle}>{totalItems}</span>
+          </Link>
+        )}
 
         {token && (
           <button onClick={handleLogout} style={logoutButtonStyle}>
@@ -63,7 +58,25 @@ export default function Navbar() {
   );
 }
 
-// --- ESTILOS PERSONALIZADOS CON LA PALETA DEL LOGO ---
+// --- ESTILOS ACTUALIZADOS ---
+
+const navContainerStyle = {
+  display: 'flex', 
+  justifyContent: 'space-between', 
+  alignItems: 'center',
+  padding: '0.8rem 2rem', 
+  background: '#E91E63', 
+  color: 'white',
+  boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+  // 3. BARRA FIJA (Sticky):
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  width: '100%',
+  zIndex: 1000,
+  boxSizing: 'border-box' // Asegura que el padding no afecte el ancho total
+};
+
 const linkStyle = {
   textDecoration: 'none',
   color: 'white',
@@ -76,7 +89,7 @@ const linkStyle = {
 
 const cartButtonStyle = {
   ...linkStyle,
-  background: '#9C27B0', // Púrpura del logo
+  background: '#9C27B0', 
   padding: '6px 15px',
   borderRadius: '25px',
   boxShadow: '0 2px 5px rgba(0,0,0,0.2)'

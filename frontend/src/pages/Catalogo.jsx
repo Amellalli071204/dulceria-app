@@ -84,6 +84,17 @@ export default function Catalogo() {
   );
 }
 
+// Dentro de tu archivo Catalogo.jsx
+export default function Catalogo() {
+  return (
+    <div style={{ paddingTop: '100px', paddingBottom: '40px' }}> 
+      {/* Todo el contenido de tus dulces aquí */}
+      <h2>Nuestros Dulces 🍬</h2>
+      {/* ... */}
+    </div>
+  );
+}
+
 // --- ESTILOS (Sin cambios) ---
 const containerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd' };
 const titleStyle = { textAlign: 'center', color: '#E91E63', marginBottom: '40px', fontWeight: 'bold' };
