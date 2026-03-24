@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { FaShoppingCart, FaUserLock, FaStore, FaSignOutAlt } from 'react-icons/fa';
+import Swal from 'sweetalert2'; // <-- 1. Importación agregada
 
 export default function Navbar() {
   const { totalItems } = useCart();
@@ -9,11 +10,39 @@ export default function Navbar() {
   const token = localStorage.getItem('token');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
+  // 2. Función modificada con SweetAlert2
   const handleLogout = () => {
-    localStorage.clear();
-    alert("¡Vuelve pronto a Dulce Mundo! 🍬");
-    navigate('/login');
-    window.location.reload();
+    Swal.fire({
+      title: '¿Cerrar sesión?',
+      text: "¡Esperamos verte pronto de nuevo en Dulce Mundo! 🍬",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#E91E63', // Rosa de tu marca
+      cancelButtonColor: '#4A148C',  // Morado del footer
+      confirmButtonText: 'Sí, salir',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.clear();
+        
+        // Alerta de despedida rápida
+        Swal.fire({
+          title: '¡Sesión cerrada!',
+          text: 'Vuelve pronto.',
+          icon: 'success',
+          confirmButtonColor: '#E91E63',
+          timer: 1500,
+          showConfirmButton: false
+        });
+
+        // Redirección con un pequeño delay para que se vea la alerta
+        setTimeout(() => {
+          navigate('/login');
+          window.location.reload();
+        }, 1500);
+      }
+    });
   };
 
   return (
@@ -61,7 +90,7 @@ export default function Navbar() {
   );
 }
 
-// --- MISMOS ESTILOS QUE ANTES ---
+// --- ESTILOS ORIGINALES PRESERVADOS ---
 const navContainerStyle = {
   display: 'flex', 
   justifyContent: 'space-between', 

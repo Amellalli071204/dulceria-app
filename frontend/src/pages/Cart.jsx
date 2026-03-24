@@ -3,6 +3,7 @@ import { useCart } from '../context/CartContext';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2'; // <-- Importado
 
 const apiUrl = import.meta.env.VITE_API_URL;
 initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
@@ -25,7 +26,13 @@ export default function Cart() {
       setPreferenceId(res.data.id);
     } catch (error) {
       console.error(error);
-      alert("Error al conectar con Mercado Pago");
+      // Alerta de error de conexión
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No se pudo conectar con Mercado Pago',
+        confirmButtonColor: '#E91E63'
+      });
     }
   };
 
@@ -33,10 +40,24 @@ export default function Cart() {
     if (isProcessing) return;
 
     const token = localStorage.getItem('token');
-    if (!token) return alert("Inicia sesión para pedir.");
+    if (!token) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Inicia Sesión',
+        text: 'Debes estar registrado para realizar un pedido.',
+        confirmButtonColor: '#9C27B0'
+      });
+    }
 
     const sinStock = cart.find(item => item.qty > (item.existencias || 0));
-    if (sinStock) return alert(`❌ ¡Stock insuficiente para ${sinStock.nombre}!`);
+    if (sinStock) {
+      return Swal.fire({
+        icon: 'error',
+        title: 'Stock insuficiente',
+        text: `Lo sentimos, solo quedan ${sinStock.existencias} unidades de ${sinStock.nombre}`,
+        confirmButtonColor: '#E91E63'
+      });
+    }
 
     setIsProcessing(true);
 
@@ -55,12 +76,19 @@ export default function Cart() {
       });
       
       if (res.status === 200 || res.status === 201) {
-        alert(`✅ ¡Pedido registrado! Gracias por comprar en Dulce Mundo.`);
+        // Alerta de éxito profesional
+        Swal.fire({
+          icon: 'success',
+          title: '¡Pedido registrado! 🍭',
+          text: 'Gracias por comprar en Dulce Mundo. Tu pedido se ha guardado correctamente.',
+          confirmButtonColor: '#E91E63'
+        });
+        
         if (typeof clearCart === 'function') clearCart();
         navigate('/catalogo'); 
       }
     } catch (error) {
-      alert("Error al registrar pedido");
+      Swal.fire('Error', 'No se pudo registrar el pedido. Intenta de nuevo.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -128,25 +156,14 @@ export default function Cart() {
   );
 }
 
-// --- ESTILOS (Inspirados en Dulce Mundo 🍭) ---
-const containerStyle = { padding: '2rem', maxWidth: '600px', margin: '0 auto', fontFamily: 'Arial, sans-serif' };
+// --- ESTILOS ---
+const containerStyle = { padding: '2rem', maxWidth: '600px', margin: '0 auto', marginTop: '70px' };
 const titleStyle = { textAlign: 'center', color: '#E91E63', marginBottom: '2rem' };
 const cartListStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
-const cardStyle = { 
-  display: 'flex', 
-  justifyContent: 'space-between', 
-  alignItems: 'center', 
-  padding: '15px', 
-  background: '#FFF0F5', 
-  borderRadius: '12px', 
-  boxShadow: '0 4px 6px rgba(0,0,0,0.05)' 
-};
+const cardStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', background: '#FFF0F5', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' };
 const stockLabelStyle = { fontSize: '0.8rem', color: '#9C27B0', fontWeight: 'bold' };
 const controlsStyle = { display: 'flex', alignItems: 'center', gap: '12px' };
-const qtyBtnStyle = { 
-  width: '30px', height: '30px', borderRadius: '50%', border: 'none', 
-  background: '#E91E63', color: 'white', cursor: 'pointer', fontWeight: 'bold' 
-};
+const qtyBtnStyle = { width: '30px', height: '30px', borderRadius: '50%', border: 'none', background: '#E91E63', color: 'white', cursor: 'pointer', fontWeight: 'bold' };
 const deleteBtnStyle = { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', marginLeft: '10px' };
 const summaryStyle = { textAlign: 'right', marginTop: '20px', padding: '10px' };
 const actionsStyle = { display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' };
