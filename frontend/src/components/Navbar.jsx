@@ -18,7 +18,7 @@ export default function Navbar() {
 
   return (
     <nav style={navContainerStyle}>
-      {/* 1. LOGO ESTÁTICO: Cambiado de Link a div para que no sea clickeable */}
+      {/* Logo Estático */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'default' }}>
         <img 
           src="/logo.jpg" 
@@ -30,16 +30,19 @@ export default function Navbar() {
         </span>
       </div>
 
-      {/* Enlaces */}
+      {/* Enlaces Condicionados */}
       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
         
-        <Link to="/catalogo" style={linkStyle}><FaStore/> Catálogo</Link>
+        {/* 1. CATÁLOGO PROTEGIDO: Solo aparece si hay token */}
+        {token && (
+          <Link to="/catalogo" style={linkStyle}><FaStore/> Catálogo</Link>
+        )}
         
         {isAdmin && (
           <Link to="/admin" style={{ ...linkStyle, color: '#FFEB3B' }}><FaUserLock/> Admin</Link>
         )}
         
-        {/* 2. CARRITO PROTEGIDO: Solo se renderiza si hay un token activo */}
+        {/* 2. CARRITO PROTEGIDO */}
         {token && (
           <Link to="/carrito" style={cartButtonStyle}>
              <FaShoppingCart/> 
@@ -58,8 +61,7 @@ export default function Navbar() {
   );
 }
 
-// --- ESTILOS ACTUALIZADOS ---
-
+// --- MISMOS ESTILOS QUE ANTES ---
 const navContainerStyle = {
   display: 'flex', 
   justifyContent: 'space-between', 
@@ -68,13 +70,12 @@ const navContainerStyle = {
   background: '#E91E63', 
   color: 'white',
   boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-  // 3. BARRA FIJA (Sticky):
   position: 'fixed',
   top: 0,
   left: 0,
   width: '100%',
   zIndex: 1000,
-  boxSizing: 'border-box' // Asegura que el padding no afecte el ancho total
+  boxSizing: 'border-box'
 };
 
 const linkStyle = {

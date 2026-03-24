@@ -15,6 +15,8 @@ function App() {
           <Navbar />
           
           <Routes>
+            {/* Pantalla principal redirige al Login */}
+            <Route path="/" element={<Navigate to="/catalogo" />} />
             
             <Route path="/login" element={<Login />} />
             <Route path="/catalogo" element={<Catalog />} />
