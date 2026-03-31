@@ -43,6 +43,8 @@ app.use('/api/products', require('./routes/products'));
 // 3. Pedidos (Mercado Pago y Efectivo)
 app.use('/api/orders', require('./routes/orders'));
 
+// 4. Usuarios (Para el Admin)
+app.use('/api/users', require('./routes/users'));
 // --- RUTA DE PRUEBA (Para verificar que el servidor vive) ---
 app.get('/', (req, res) => {
     res.send('¡Servidor de Dulcería funcionando correctamente! 🍬');
