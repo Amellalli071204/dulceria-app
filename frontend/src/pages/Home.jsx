@@ -6,7 +6,7 @@ export default function Home() {
 
   return (
     <div style={homeContainerStyle}>
-      {/* Textura de fondo sutil (nube de azúcar) */}
+      {/* Textura de fondo sutil */}
       <div style={overlayStyle}></div>
 
       <div style={contentStyle}>
@@ -16,7 +16,7 @@ export default function Home() {
           style={logoStyle} 
         />
         
-        {/* TÍTULO ESTILO NUBE PASTEL (Rosa y Blanco) */}
+        {/* TÍTULO ESTILO CARAMELO VISIBLE */}
         <h1 style={pastelTitleStyle}>Dulce Mundo</h1>
         
         <p style={subtitleStyle}>
@@ -47,16 +47,12 @@ export default function Home() {
             <FaUserPlus /> Iniciar Sesión / Registrarse
           </button>
         </div>
-
-        <p style={{marginTop: '40px', fontSize: '0.85rem', color: '#BA68C8', fontWeight: '500'}}>
-          © 2026 - Proyecto de Ingeniería | UMB Atenco
-        </p>
       </div>
     </div>
   );
 }
 
-// --- ESTILOS TOTAL PASTEL ---
+// --- ESTILOS REFINADOS (Subimos el tono del Rosa) ---
 const homeContainerStyle = { 
   minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
   textAlign: 'center', background: 'linear-gradient(135deg, #FCE4EC 0%, #F3E5F5 100%)', 
@@ -73,32 +69,32 @@ const contentStyle = { zIndex: 2, maxWidth: '750px', display: 'flex', flexDirect
 
 const logoStyle = { 
   width: '120px', height: '120px', borderRadius: '50%', 
-  border: '5px solid #F48FB1', // Rosa pastel suave
+  border: '5px solid #F06292', // Rosa más vibrante
   marginBottom: '25px', 
-  boxShadow: '0 8px 20px rgba(186, 104, 200, 0.15)' // Sombra lila suave
+  boxShadow: '0 8px 20px rgba(240, 98, 146, 0.2)' 
 };
 
 const pastelTitleStyle = {
   fontSize: '4.8rem',
   fontFamily: "'Fredoka One', cursive",
-  color: '#F48FB1', // Rosa pastel base
+  color: '#F06292', // Rosa Chicle Pastel
   letterSpacing: '0.5px',
   marginBottom: '10px',
   display: 'inline-block',
-  // Truco de degradado suave de rosa a blanco
-  background: 'linear-gradient(to bottom, #FFFFFF 10%, #F48FB1 90%)',
+  // Degradado de Blanco a Rosa visible
+  background: 'linear-gradient(to bottom, #FFFFFF 15%, #F06292 100%)',
   WebkitBackgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
-  // Sombra rosa muy suave para dar volumen sin dureza
+  // Sombra con un toque más de profundidad
   textShadow: `
-    2px 2px 0px #FCE4EC, 
-    0px 10px 20px rgba(244, 143, 177, 0.15)
+    3px 3px 0px rgba(240, 98, 146, 0.15), 
+    0px 10px 20px rgba(233, 30, 99, 0.12)
   `
 };
 
 const subtitleStyle = { 
   fontSize: '1.25rem', 
-  color: '#7E57C2', // Morado uva pastel (más suave que el negro)
+  color: '#7E57C2', // Morado uva suave
   marginBottom: '35px', 
   lineHeight: '1.4', 
   maxWidth: '600px',
@@ -108,7 +104,7 @@ const subtitleStyle = {
 const techCardStyle = { 
   background: 'rgba(255, 255, 255, 0.95)', padding: '30px', borderRadius: '24px', 
   boxShadow: '0 12px 30px rgba(186, 104, 200, 0.05)', marginBottom: '35px',
-  border: '1px solid rgba(244, 143, 177, 0.2)', backdropFilter: 'blur(3px)'
+  border: '1px solid rgba(240, 98, 146, 0.15)', backdropFilter: 'blur(3px)'
 };
 
 const stackGrid = { 
