@@ -26,9 +26,6 @@ export default function Home() {
         </div>
 
         <div style={buttonContainerStyle}>
-          <button onClick={() => navigate('/catalogo')} style={btnPrimary}>
-            <FaStore /> Ver el Catálogo
-          </button>
           <button onClick={() => navigate('/login')} style={btnSecondary}>
             <FaUserPlus /> Iniciar Sesión / Registrarme
           </button>
