@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar, FaUserLock, FaUsers } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -9,6 +9,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function Admin() {
     const [orders, setOrders] = useState([]);
+    const [users, setUsers] = useState([]); // <-- NUEVO: Estado para usuarios
     const [loadingId, setLoadingId] = useState(null);
     const [newProduct, setNewProduct] = useState({ 
         nombre: '', descripcion: '', precio: '', imagen: '', existencias: '' 
@@ -20,6 +21,7 @@ export default function Admin() {
             window.location.href = "/";
         }
         fetchOrders();
+        fetchUsers(); // <-- NUEVO: Cargamos usuarios al iniciar
     }, []);
 
     const fetchOrders = async () => {
@@ -31,7 +33,42 @@ export default function Admin() {
         } catch (error) { console.error(error); }
     };
 
-    // --- LOGICA DEL LOGO (DESDE PUBLIC) ---
+    // --- NUEVO: Función para traer usuarios ---
+    const fetchUsers = async () => {
+        try {
+            const res = await axios.get(`${apiUrl}/api/users`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            setUsers(res.data);
+        } catch (error) { console.error("Error usuarios:", error); }
+    };
+
+    // --- NUEVO: Función para cambiar Rango ---
+    const handleToggleAdmin = async (id, currentStatus, nombre) => {
+        const confirm = await Swal.fire({
+            title: `¿${!currentStatus ? 'Hacer' : 'Quitar'} Admin a ${nombre}?`,
+            text: "¡Asegúrate de confiar en este usuario! 🍭⚙️",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#E91E63',
+            cancelButtonColor: '#4A148C',
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (confirm.isConfirmed) {
+            try {
+                await axios.put(`${apiUrl}/api/users/${id}/role`, { isAdmin: !currentStatus }, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+                Swal.fire('¡Éxito!', `${nombre} ha cambiado de rango.`, 'success');
+                fetchUsers();
+            } catch (e) {
+                Swal.fire('Error', 'No se pudo actualizar el usuario', 'error');
+            }
+        }
+    };
+
     const getLogoBase64 = () => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -54,15 +91,12 @@ export default function Admin() {
         try {
             const imgData = await getLogoBase64();
             doc.addImage(imgData, 'JPEG', 82, 10, 45, 45);
-
             doc.setFontSize(22);
             doc.setTextColor(233, 30, 99);
             doc.text("Dulce Mundo", 105, 60, { align: 'center' });
-            
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text("Santa Isabel Ixtapan, Atenco, Edo. Mex.", 105, 68, { align: 'center' });
-
             doc.setFontSize(12);
             doc.setTextColor(0);
             doc.text(`Cliente: ${order.usuario}`, 20, 80);
@@ -86,29 +120,25 @@ export default function Admin() {
             doc.setFontSize(14);
             doc.setFont("helvetica", "bold");
             doc.text(`TOTAL A PAGAR: $${order.total}`, 140, finalY + 15);
-
             doc.setFontSize(10);
             doc.setFont("helvetica", "italic");
             doc.text("¡Gracias por endulzar tu día!", 105, finalY + 30, { align: 'center' });
-
             doc.save(`Ticket_${order.usuario}.pdf`);
 
             const mensaje = `Hola ${order.usuario}, ¡gracias por tu compra en Dulce Mundo! 🍭 Aquí tienes tu ticket por $${order.total}.`;
             window.open(`https://wa.me/52${order.telefono.replace(/\s+/g, '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
-
         } catch (error) {
             console.error("Error logo:", error);
-            Swal.fire('Error', 'No se pudo cargar el logo del ticket', 'error');
+            Swal.fire('Error', 'No se pudo generar el ticket', 'error');
         }
     };
 
     const handleUpdateStatus = async (id, nuevoEstado) => {
         setLoadingId(id);
         try {
-            await axios.patch(`${apiUrl}/api/orders/${id}/status`, 
-                { nuevoEstado }, 
-                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-            );
+            await axios.patch(`${apiUrl}/api/orders/${id}/status`, { nuevoEstado }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
             Swal.fire({ title: 'Actualizado', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
             fetchOrders();
         } catch (error) { Swal.fire('Error', 'No se pudo actualizar', 'error'); }
@@ -128,9 +158,9 @@ export default function Admin() {
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
-            <h1 style={{ color: '#E91E63', textAlign: 'center' }}>Panel de Administración 🔐</h1>
+            <h1 style={{ color: '#E91E63', textAlign: 'center', marginBottom: '30px' }}>Panel de Administración 🔐</h1>
 
-            {/* --- FORMULARIO --- */}
+            {/* --- SECCIÓN PRODUCTOS --- */}
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
                 <h2 style={{ color: '#9C27B0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <FaPlusCircle /> Agregar Nuevo Dulce
@@ -140,17 +170,40 @@ export default function Admin() {
                     <input style={inputStyle} type="number" placeholder="Existencias iniciales" value={newProduct.existencias} onChange={e => setNewProduct({...newProduct, existencias: e.target.value})} required />
                     <input style={inputStyle} placeholder="Descripción" value={newProduct.descripcion} onChange={e => setNewProduct({...newProduct, descripcion: e.target.value})} />
                     <input style={inputStyle} type="number" placeholder="Precio" value={newProduct.precio} onChange={e => setNewProduct({...newProduct, precio: e.target.value})} required />
-                    <input style={inputStyle} placeholder="URL de Imagen" value={newProduct.imagen} onChange={e => setNewProduct({...newProduct, imagen: e.target.value})} />
+                    <input style={{...inputStyle, gridColumn: 'span 2'}} placeholder="URL de Imagen" value={newProduct.imagen} onChange={e => setNewProduct({...newProduct, imagen: e.target.value})} />
                     <button type="submit" style={saveButtonStyle}>Guardar en Inventario</button>
                 </form>
             </div>
 
-            {/* --- TABLA --- */}
-            <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* --- NUEVA SECCIÓN USUARIOS --- */}
+            <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                <h2 style={{ color: '#4A148C', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FaUserLock /> Gestionar Admins
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '15px', marginTop: '15px' }}>
+                    {users.map(u => (
+                        <div key={u._id} style={{ border: '1px solid #eee', padding: '15px', borderRadius: '10px', textAlign: 'center', background: u.isAdmin ? '#fce4ec' : '#f8f9fa' }}>
+                            <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>{u.nombre}</p>
+                            <button 
+                                onClick={() => handleToggleAdmin(u._id, u.isAdmin, u.nombre)}
+                                style={{ 
+                                    background: u.isAdmin ? '#4A148C' : '#E91E63', color: 'white', 
+                                    border: 'none', padding: '6px 12px', borderRadius: '20px', cursor: 'pointer', fontSize: '0.8rem' 
+                                }}
+                            >
+                                {u.isAdmin ? 'Quitar Admin' : 'Hacer Admin'}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* --- SECCIÓN PEDIDOS --- */}
+            <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                 <FaBoxOpen /> Pedidos Recientes
             </h2>
-            <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto', background: 'white', borderRadius: '10px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: '#E91E63', color: 'white' }}>
                             <th style={{ padding: '15px' }}>Fecha</th>
@@ -168,19 +221,13 @@ export default function Admin() {
                                 <td>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
                                         <span>{order.telefono}</span>
-                                        <button 
-                                            onClick={() => generarTicket(order)}
-                                            style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '1.4rem' }}
-                                        >
+                                        <button onClick={() => generarTicket(order)} style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '1.4rem' }}>
                                             <FaFileInvoiceDollar />
                                         </button>
                                     </div>
                                 </td>
                                 <td>${order.total}</td>
                                 <td style={{ padding: '10px' }}>
-                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '5px' }}>
-                                        {order.productos?.map((p, i) => <div key={i}>{p.nombre} ({p.cantidad})</div>)}
-                                    </div>
                                     <button 
                                         onClick={() => handleUpdateStatus(order._id, order.estado === 'pendiente' ? 'pagado' : 'entregado')}
                                         disabled={loadingId === order._id}
@@ -202,6 +249,5 @@ export default function Admin() {
     );
 }
 
-// --- ESTILOS ---
 const inputStyle = { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', outline: 'none' };
 const saveButtonStyle = { gridColumn: 'span 2', background: '#9C27B0', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '10px' };
