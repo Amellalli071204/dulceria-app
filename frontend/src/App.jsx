@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import Navbar from './components/Navbar';
+import Home from './pages/Home'; // <-- 1. IMPORTAMOS LA BIENVENIDA
 import Login from './pages/Login';
 import Catalog from './pages/Catalogo';
 import Cart from './pages/Cart';
@@ -15,8 +16,8 @@ function App() {
           <Navbar />
           
           <Routes>
-            {/* Pantalla principal redirige al Login */}
-            <Route path="/" element={<Navigate to="/catalogo" />} />
+            {/* 2. LA RUTA RAÍZ AHORA ES LA BIENVENIDA */}
+            <Route path="/" element={<Home />} />
             
             <Route path="/login" element={<Login />} />
             <Route path="/catalogo" element={<Catalog />} />
@@ -25,7 +26,7 @@ function App() {
           </Routes>
           
         </div>
-       <Footer /> 
+        <Footer /> 
       </BrowserRouter>
     </CartProvider>
   );
