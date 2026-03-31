@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { FaShoppingCart, FaUserLock, FaStore, FaSignOutAlt } from 'react-icons/fa';
-import Swal from 'sweetalert2'; // <-- 1. Importación agregada
+import Swal from 'sweetalert2';
 
 export default function Navbar() {
   const { totalItems } = useCart();
@@ -10,23 +10,20 @@ export default function Navbar() {
   const token = localStorage.getItem('token');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-  // 2. Función modificada con SweetAlert2
   const handleLogout = () => {
     Swal.fire({
       title: '¿Cerrar sesión?',
       text: "¡Esperamos verte pronto de nuevo en Dulce Mundo! 🍬",
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#E91E63', // Rosa de tu marca
-      cancelButtonColor: '#4A148C',  // Morado del footer
+      confirmButtonColor: '#E91E63',
+      cancelButtonColor: '#4A148C',
       confirmButtonText: 'Sí, salir',
       cancelButtonText: 'Cancelar',
       reverseButtons: true
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.clear();
-        
-        // Alerta de despedida rápida
         Swal.fire({
           title: '¡Sesión cerrada!',
           text: 'Vuelve pronto.',
@@ -36,7 +33,6 @@ export default function Navbar() {
           showConfirmButton: false
         });
 
-        // Redirección con un pequeño delay para que se vea la alerta
         setTimeout(() => {
           navigate('/login');
           window.location.reload();
@@ -47,8 +43,8 @@ export default function Navbar() {
 
   return (
     <nav style={navContainerStyle}>
-      {/* Logo Estático */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'default' }}>
+      {/* --- CAMBIO AQUÍ: Logo ahora es un Link hacia la Bienvenida --- */}
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'white', textDecoration: 'none' }}>
         <img 
           src="/logo.jpg" 
           alt="Logo Dulce Mundo" 
@@ -57,12 +53,10 @@ export default function Navbar() {
         <span style={{ fontSize: '1.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>
           Dulce Mundo 🍭
         </span>
-      </div>
+      </Link>
 
       {/* Enlaces Condicionados */}
       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-        
-        {/* 1. CATÁLOGO PROTEGIDO: Solo aparece si hay token */}
         {token && (
           <Link to="/catalogo" style={linkStyle}><FaStore/> Catálogo</Link>
         )}
@@ -71,7 +65,6 @@ export default function Navbar() {
           <Link to="/admin" style={{ ...linkStyle, color: '#FFEB3B' }}><FaUserLock/> Admin</Link>
         )}
         
-        {/* 2. CARRITO PROTEGIDO */}
         {token && (
           <Link to="/carrito" style={cartButtonStyle}>
              <FaShoppingCart/> 
@@ -89,6 +82,7 @@ export default function Navbar() {
     </nav>
   );
 }
+
 
 // --- ESTILOS ORIGINALES PRESERVADOS ---
 const navContainerStyle = {
