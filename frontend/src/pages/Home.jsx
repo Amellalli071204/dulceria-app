@@ -6,7 +6,7 @@ export default function Home() {
 
   return (
     <div style={homeContainerStyle}>
-      {/* Textura de fondo sutil */}
+      {/* Textura de fondo sutil (nube de azúcar) */}
       <div style={overlayStyle}></div>
 
       <div style={contentStyle}>
@@ -16,8 +16,8 @@ export default function Home() {
           style={logoStyle} 
         />
         
-        {/* TÍTULO ESTILO STICKER (Blanco con borde rosa) */}
-        <h1 style={candyTitleStyle}>Dulce Mundo</h1>
+        {/* TÍTULO ESTILO NUBE PASTEL (Rosa y Blanco) */}
+        <h1 style={pastelTitleStyle}>Dulce Mundo</h1>
         
         <p style={subtitleStyle}>
           Plataforma E-commerce desarrollada por alumnos de <b>Ingeniería en TICs</b> de la <b>UES Atenco (UMB)</b>.
@@ -25,15 +25,15 @@ export default function Home() {
         
         {/* TARJETA TÉCNICA */}
         <div style={techCardStyle}>
-          <h3 style={{color: '#E91E63', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}>
+          <h3 style={{color: '#BA68C8', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}>
             <FaCode /> Sobre el Proyecto
           </h3>
-          <p style={{textAlign: 'justify', fontSize: '1.05rem', lineHeight: '1.6', color: '#444'}}>
+          <p style={{textAlign: 'justify', fontSize: '1.05rem', lineHeight: '1.6', color: '#555'}}>
             Esta aplicación web es un desarrollo integral que gestiona el ciclo de venta de productos de confitería. 
             Implementa un <b>catálogo dinámico</b>, un <b>carrito de compras</b> con persistencia de datos y un 
             <b> panel administrativo</b> robusto para el control de inventarios y usuarios.
           </p>
-          <hr style={{margin: '20px 0', opacity: 0.1}} />
+          <hr style={{margin: '20px 0', opacity: 0.1, borderColor: '#CE93D8'}} />
           <div style={stackGrid}>
             <span><FaServer /> Node.js & Express</span>
             <span><FaDatabase /> MongoDB Atlas</span>
@@ -41,14 +41,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* BOTÓN DE ACCESO */}
+        {/* BOTÓN DE ACCESO CLARO */}
         <div style={buttonContainerStyle}>
           <button onClick={() => navigate('/login')} style={btnPrimary}>
-            <FaUserPlus /> Acceder al Sistema
+            <FaUserPlus /> Iniciar Sesión / Registrarse
           </button>
         </div>
 
-        <p style={{marginTop: '40px', fontSize: '0.85rem', color: '#888', fontWeight: '500'}}>
+        <p style={{marginTop: '40px', fontSize: '0.85rem', color: '#BA68C8', fontWeight: '500'}}>
           © 2026 - Proyecto de Ingeniería | UMB Atenco
         </p>
       </div>
@@ -56,7 +56,7 @@ export default function Home() {
   );
 }
 
-// --- ESTILOS REFINADOS ---
+// --- ESTILOS TOTAL PASTEL ---
 const homeContainerStyle = { 
   minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
   textAlign: 'center', background: 'linear-gradient(135deg, #FCE4EC 0%, #F3E5F5 100%)', 
@@ -66,55 +66,62 @@ const homeContainerStyle = {
 const overlayStyle = {
   position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
   backgroundImage: 'url("https://www.transparenttextures.com/patterns/candy.png")', 
-  opacity: 0.15, zIndex: 1
+  opacity: 0.12, zIndex: 1
 };
 
 const contentStyle = { zIndex: 2, maxWidth: '750px', display: 'flex', flexDirection: 'column', alignItems: 'center' };
 
 const logoStyle = { 
   width: '120px', height: '120px', borderRadius: '50%', 
-  border: '5px solid #E91E63', marginBottom: '25px', 
-  boxShadow: '0 8px 20px rgba(233, 30, 99, 0.2)' 
+  border: '5px solid #F48FB1', // Rosa pastel suave
+  marginBottom: '25px', 
+  boxShadow: '0 8px 20px rgba(186, 104, 200, 0.15)' // Sombra lila suave
 };
 
-const candyTitleStyle = {
+const pastelTitleStyle = {
   fontSize: '4.8rem',
   fontFamily: "'Fredoka One', cursive",
-  color: '#FFFFFF',
-  letterSpacing: '1px',
-  marginBottom: '15px',
+  color: '#F48FB1', // Rosa pastel base
+  letterSpacing: '0.5px',
+  marginBottom: '10px',
   display: 'inline-block',
-  // Efecto de borde rosa fuerte y sombra de profundidad
+  // Truco de degradado suave de rosa a blanco
+  background: 'linear-gradient(to bottom, #FFFFFF 10%, #F48FB1 90%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  // Sombra rosa muy suave para dar volumen sin dureza
   textShadow: `
-    3px 3px 0px #E91E63, 
-    -1px -1px 0px #E91E63, 
-    1px -1px 0px #E91E63, 
-    -1px 1px 0px #E91E63,
-    0px 10px 25px rgba(233, 30, 99, 0.25)
+    2px 2px 0px #FCE4EC, 
+    0px 10px 20px rgba(244, 143, 177, 0.15)
   `
 };
 
 const subtitleStyle = { 
-  fontSize: '1.25rem', color: '#4A148C', marginBottom: '35px', 
-  lineHeight: '1.4', maxWidth: '600px' 
+  fontSize: '1.25rem', 
+  color: '#7E57C2', // Morado uva pastel (más suave que el negro)
+  marginBottom: '35px', 
+  lineHeight: '1.4', 
+  maxWidth: '600px',
+  fontWeight: '500'
 };
 
 const techCardStyle = { 
-  background: 'rgba(255, 255, 255, 0.9)', padding: '30px', borderRadius: '24px', 
-  boxShadow: '0 12px 30px rgba(0,0,0,0.06)', marginBottom: '35px',
-  border: '1px solid rgba(255, 255, 255, 0.3)', backdropFilter: 'blur(5px)'
+  background: 'rgba(255, 255, 255, 0.95)', padding: '30px', borderRadius: '24px', 
+  boxShadow: '0 12px 30px rgba(186, 104, 200, 0.05)', marginBottom: '35px',
+  border: '1px solid rgba(244, 143, 177, 0.2)', backdropFilter: 'blur(3px)'
 };
 
 const stackGrid = { 
   display: 'flex', justifyContent: 'space-around', fontSize: '0.95rem', 
-  color: '#666', fontWeight: 'bold', gap: '15px', flexWrap: 'wrap' 
+  color: '#888', fontWeight: 'bold', gap: '15px', flexWrap: 'wrap' 
 };
 
 const buttonContainerStyle = { display: 'flex', justifyContent: 'center' };
 
 const btnPrimary = { 
-  background: '#E91E63', color: 'white', border: 'none', padding: '18px 45px', 
+  background: '#BA68C8', // Lila pastel
+  color: 'white', border: 'none', padding: '18px 45px', 
   borderRadius: '35px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', 
   transition: '0.3s', display: 'flex', alignItems: 'center', gap: '12px', 
-  boxShadow: '0 6px 15px rgba(233, 30, 99, 0.3)' 
+  boxShadow: '0 6px 15px rgba(186, 104, 200, 0.2)' 
 };
