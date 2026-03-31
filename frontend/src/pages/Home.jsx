@@ -38,7 +38,7 @@ export default function Home() {
         {/* BOTÓN ÚNICO DE ACCESO */}
         <div style={buttonContainerStyle}>
           <button onClick={() => navigate('/login')} style={btnPrimary}>
-            <FaUserPlus /> Acceder al Sistema
+            <FaUserPlus /> Iniciar sesión / Registrarse
           </button>
         </div>
 
