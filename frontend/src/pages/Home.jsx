@@ -41,10 +41,6 @@ export default function Home() {
             <FaUserPlus /> Iniciar sesión / Registrarse
           </button>
         </div>
-
-        <p style={{marginTop: '30px', fontSize: '0.8rem', color: '#888'}}>
-          © 2026 - Proyecto de Estructura de Datos y Desarrollo Web | UMB Atenco
-        </p>
       </div>
     </div>
   );
