@@ -14,12 +14,14 @@ export default function Home() {
           alt="Logo Dulce Mundo" 
           style={logoStyle} 
         />
-        <h1 style={titleStyle}>Dulce Mundo 🍭✨</h1>
+        
+        {/* TÍTULO CON ESTILO CANDY 3D Y DEGRADADO */}
+        <h1 style={candyTitleStyle}>Dulce Mundo 🍭✨</h1>
+        
         <p style={subtitleStyle}>
           Plataforma E-commerce desarrollada por estudiantes de <b>Ingeniería en TICs</b> de la <b>UES Atenco (UMB)</b>.
         </p>
         
-        {/* SECCIÓN DE PRESENTACIÓN TÉCNICA */}
         <div style={techCardStyle}>
           <h3 style={{color: '#E91E63', marginBottom: '15px'}}><FaCode /> Sobre el Proyecto</h3>
           <p style={{textAlign: 'justify', fontSize: '1rem', lineHeight: '1.5'}}>
@@ -35,18 +37,37 @@ export default function Home() {
           </div>
         </div>
 
-        {/* BOTÓN ÚNICO DE ACCESO */}
         <div style={buttonContainerStyle}>
           <button onClick={() => navigate('/login')} style={btnPrimary}>
-            <FaUserPlus /> Iniciar sesión / Registrarse
+            <FaUserPlus /> Acceder al Sistema
           </button>
         </div>
+
+        <p style={{marginTop: '30px', fontSize: '0.8rem', color: '#888'}}>
+          © 2026 - Proyecto de Estructura de Datos y Desarrollo Web | UMB Atenco
+        </p>
       </div>
     </div>
   );
 }
 
-// --- ESTILOS ---
+// --- ESTILOS CANDY PARA EL TÍTULO ---
+const candyTitleStyle = {
+  fontSize: '4.5rem', // Grande para que luzca
+  fontFamily: "'Fredoka One', cursive",
+  letterSpacing: '-1px',
+  marginBottom: '20px',
+  textAlign: 'center',
+  // Degradado rosa a amarillo (como tu imagen)
+  background: 'linear-gradient(to bottom, #FF80AB 20%, #FFF9C4 80%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  // Sombreado 3D por capas
+  filter: 'drop-shadow(3px 3px 0px #E91E63) drop-shadow(6px 6px 10px rgba(0,0,0,0.2))',
+  display: 'inline-block'
+};
+
+// --- ESTILOS DE ESTRUCTURA ---
 const homeContainerStyle = { 
   minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
   textAlign: 'center', background: 'linear-gradient(135deg, #fce4ec 0%, #f3e5f5 100%)', 
@@ -61,7 +82,6 @@ const overlayStyle = {
 
 const contentStyle = { zIndex: 2, maxWidth: '800px', display: 'flex', flexDirection: 'column', alignItems: 'center' };
 const logoStyle = { width: '110px', height: '110px', borderRadius: '50%', border: '4px solid #E91E63', marginBottom: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' };
-const titleStyle = { fontSize: '3rem', color: '#E91E63', marginBottom: '10px' };
 const subtitleStyle = { fontSize: '1.3rem', color: '#4A148C', marginBottom: '25px', fontWeight: '500' };
 
 const techCardStyle = { 

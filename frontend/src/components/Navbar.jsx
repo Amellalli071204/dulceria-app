@@ -43,14 +43,14 @@ export default function Navbar() {
 
   return (
     <nav style={navContainerStyle}>
-      {/* --- CAMBIO AQUÍ: Logo ahora es un Link hacia la Bienvenida --- */}
-      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'white', textDecoration: 'none' }}>
+      {/* Logo y Nombre con Efecto CANDY */}
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'white', textDecoration: 'none' }}>
         <img 
           src="/logo.jpg" 
           alt="Logo Dulce Mundo" 
-          style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white' }} 
+          style={{ width: '45px', height: '45px', borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }} 
         />
-        <span style={{ fontSize: '1.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>
+        <span style={candyTitleStyle}>
           Dulce Mundo 🍭
         </span>
       </Link>
@@ -83,6 +83,21 @@ export default function Navbar() {
   );
 }
 
+// --- NUEVO ESTILO CANDY 3D ---
+const candyTitleStyle = {
+  fontSize: '1.8rem',
+  fontFamily: "'Fredoka One', cursive", // Asegúrate de tenerla en index.html
+  color: '#FFFFFF',
+  letterSpacing: '1px',
+  // Este es el truco para el efecto de la imagen (borde y profundidad)
+  textShadow: `
+    2px 2px 0px #C2185B, 
+    -1px -1px 0px #C2185B, 
+    1px -1px 0px #C2185B, 
+    -1px 1px 0px #C2185B,
+    3px 4px 5px rgba(0,0,0,0.3)
+  `
+};
 
 // --- ESTILOS ORIGINALES PRESERVADOS ---
 const navContainerStyle = {
@@ -108,7 +123,8 @@ const linkStyle = {
   display: 'flex',
   alignItems: 'center',
   gap: '6px',
-  transition: '0.3s'
+  transition: '0.3s',
+  fontFamily: 'Arial, sans-serif'
 };
 
 const cartButtonStyle = {
