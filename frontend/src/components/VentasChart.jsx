@@ -4,6 +4,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const COLORS = ['#F06292', '#BA68C8', '#FF80AB', '#CE93D8', '#F48FB1'];
 
+// En tu VentasChart.jsx, cambia la URL del axios.get por esta:
+const res = await axios.get('https://humorous-nourishment-production.up.railway.app/api/orders/stats?v=' + Date.now());
+
+
 export default function VentasChart() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,19 +15,18 @@ export default function VentasChart() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Ponemos la URL completa a mano para asegurar conexión directa
-        const res = await axios.get('https://humorous-nourishment-production.up.railway.app/api/orders/stats');
+        // Forzamos el GET a la URL absoluta
+        const res = await axios.get(API_URL);
         
-        console.log("CHISMOSO - Datos recibidos del backend:", res.data);
-        
-        if (res.data && res.data.length > 0) {
+        // Verificamos si lo que llegó es realmente un array (JSON) y no HTML
+        if (Array.isArray(res.data)) {
           setData(res.data);
         } else {
-          console.warn("CHISMOSO - El backend respondió vacío []");
+          console.error("Error: El backend devolvió algo que no es una lista:", res.data);
           setData([]);
         }
       } catch (err) {
-        console.error("CHISMOSO - Error en la petición axios:", err);
+        console.error("Error en la petición:", err);
       } finally {
         setLoading(false);
       }
@@ -31,16 +34,13 @@ export default function VentasChart() {
     fetchStats();
   }, []);
 
-  if (loading) return <div style={{height:'350px', display:'flex', alignItems:'center', justifyContent:'center'}}>
-    <p style={{color:'#BA68C8'}}>Cargando dulces estadísticas... 🍭</p>
-  </div>;
+  if (loading) return <div style={{height:'350px', display:'flex', alignItems:'center', justifyContent:'center'}}><p>Cargando... 🍭</p></div>;
 
   return (
     <div style={chartContainerStyle}>
       <h3 style={{ color: '#4A148C', textAlign: 'center', marginBottom: '20px', fontFamily: "'Fredoka One', cursive" }}>
         Top 5 Dulces Más Vendidos 🍭
       </h3>
-      
       <div style={{ width: '100%', height: '350px' }}>
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -60,8 +60,8 @@ export default function VentasChart() {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #eee', borderRadius: '15px' }}>
-            <p style={{ color: '#999' }}>El backend dice que no hay ventas aún. 🍬</p>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ color: '#999' }}>Aún no hay ventas para mostrar 📊</p>
           </div>
         )}
       </div>
