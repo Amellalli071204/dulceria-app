@@ -4,12 +4,13 @@ import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar, FaUserLock, F
 import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import VentasChart from '../components/VentasChart'; // Importación verificada
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function Admin() {
     const [orders, setOrders] = useState([]);
-    const [users, setUsers] = useState([]); // <-- NUEVO: Estado para usuarios
+    const [users, setUsers] = useState([]); 
     const [loadingId, setLoadingId] = useState(null);
     const [newProduct, setNewProduct] = useState({ 
         nombre: '', descripcion: '', precio: '', imagen: '', existencias: '' 
@@ -21,7 +22,7 @@ export default function Admin() {
             window.location.href = "/";
         }
         fetchOrders();
-        fetchUsers(); // <-- NUEVO: Cargamos usuarios al iniciar
+        fetchUsers(); 
     }, []);
 
     const fetchOrders = async () => {
@@ -33,7 +34,6 @@ export default function Admin() {
         } catch (error) { console.error(error); }
     };
 
-    // --- NUEVO: Función para traer usuarios ---
     const fetchUsers = async () => {
         try {
             const res = await axios.get(`${apiUrl}/api/users`, {
@@ -43,7 +43,6 @@ export default function Admin() {
         } catch (error) { console.error("Error usuarios:", error); }
     };
 
-    // --- NUEVO: Función para cambiar Rango ---
     const handleToggleAdmin = async (id, currentStatus, nombre) => {
         const confirm = await Swal.fire({
             title: `¿${!currentStatus ? 'Hacer' : 'Quitar'} Admin a ${nombre}?`,
@@ -158,7 +157,14 @@ export default function Admin() {
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
-            <h1 style={{ color: '#E91E63', textAlign: 'center', marginBottom: '30px' }}>Panel de Administración 🔐</h1>
+            <h1 style={{ color: '#E91E63', textAlign: 'center', marginBottom: '10px', fontFamily: "'Fredoka One', cursive" }}>
+                Panel de Administración 🔐
+            </h1>
+
+            {/* --- NUEVA GRÁFICA DE VENTAS (ESTADÍSTICAS) --- */}
+            <div style={{ marginBottom: '40px' }}>
+                <VentasChart />
+            </div>
 
             {/* --- SECCIÓN PRODUCTOS --- */}
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
@@ -175,7 +181,7 @@ export default function Admin() {
                 </form>
             </div>
 
-            {/* --- NUEVA SECCIÓN USUARIOS --- */}
+            {/* --- SECCIÓN USUARIOS --- */}
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
                 <h2 style={{ color: '#4A148C', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <FaUserLock /> Gestionar Admins
