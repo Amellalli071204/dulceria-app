@@ -6,7 +6,7 @@ const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
-// 1. CREAR PREFERENCIA MERCADO PAGO
+// 1. PREFERENCIA MERCADO PAGO
 router.post('/create_preference', async (req, res) => {
     try {
         const body = {
@@ -80,7 +80,7 @@ router.patch('/:id/status', async (req, res) => {
     }
 });
 
-// 5. NUEVO: ENDPOINT PARA ESTADÍSTICAS DEL DASHBOARD
+// 5. ESTADÍSTICAS (EL MOTOR DE LA GRÁFICA)
 router.get('/stats', async (req, res) => {
     try {
         const stats = await Order.aggregate([
@@ -95,8 +95,10 @@ router.get('/stats', async (req, res) => {
             { $sort: { ventas: -1 } },
             { $limit: 5 }
         ]);
+        console.log("Datos enviados a la gráfica:", stats); // Para depuración
         res.json(stats);
     } catch (err) {
+        console.error("Error en aggregate:", err);
         res.status(500).json({ error: 'Error al generar estadísticas' });
     }
 });
