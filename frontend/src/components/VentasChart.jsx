@@ -11,18 +11,12 @@ export default function VentasChart() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Usamos la URL de producción de tu API en Railway
         const res = await axios.get('https://humorous-nourishment-production.up.railway.app/api/orders/stats');
-        
-        // Validamos que la respuesta sea un array antes de guardarla
         if (res.data && Array.isArray(res.data)) {
           setData(res.data);
-        } else {
-          setData([]);
         }
       } catch (err) {
-        console.error("Error al traer estadísticas:", err);
-        setData([]);
+        console.error("Error trayendo estadísticas:", err);
       } finally {
         setLoading(false);
       }
@@ -30,59 +24,42 @@ export default function VentasChart() {
     fetchStats();
   }, []);
 
-  if (loading) return <p style={{ textAlign: 'center', color: '#BA68C8', padding: '20px' }}>Cargando estadísticas... 🍭</p>;
+  if (loading) return (
+    <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#BA68C8', fontFamily: 'Fredoka One' }}>Preparando tus dulces datos... 🍭</p>
+    </div>
+  );
 
   return (
     <div style={chartContainerStyle}>
-      <h3 style={{ 
-        color: '#4A148C', 
-        marginBottom: '20px', 
-        textAlign: 'center', 
-        fontFamily: "'Fredoka One', cursive" 
-      }}>
+      <h3 style={{ color: '#4A148C', textAlign: 'center', marginBottom: '20px', fontFamily: "'Fredoka One', cursive" }}>
         Top 5 Dulces Más Vendidos 🍭
       </h3>
       
-      {/* SOLUCIÓN AL ERROR width(-1): 
-        Definimos un alto fijo (minHeight) para que el ResponsiveContainer 
-        tenga un espacio real donde dibujarse.
-      */}
-      <div style={{ width: '100%', height: '350px', minHeight: '350px' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={data} 
-            margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-            <XAxis 
-              dataKey="name" 
-              axisLine={false} 
-              tickLine={false} 
-              style={{ fontSize: '12px', fontWeight: 'bold' }}
-            />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
-              style={{ fontSize: '12px' }}
-            />
-            <Tooltip 
-              contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
-              cursor={{ fill: 'rgba(240, 98, 146, 0.1)' }}
-            />
-            <Bar dataKey="ventas" radius={[10, 10, 0, 0]} barSize={40}>
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <div style={{ width: '100%', height: '350px' }}>
+        {data.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} style={{ fontSize: '12px', fontWeight: 'bold' }} />
+              <YAxis axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
+              <Tooltip 
+                contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
+                cursor={{ fill: 'rgba(240, 98, 146, 0.1)' }}
+              />
+              <Bar dataKey="ventas" radius={[10, 10, 0, 0]} barSize={45}>
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ color: '#999' }}>Aún no hay pedidos registrados para mostrar gráficas 📊</p>
+          </div>
+        )}
       </div>
-      
-      {data.length === 0 && (
-        <p style={{ textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>
-          Aún no hay ventas registradas para mostrar.
-        </p>
-      )}
     </div>
   );
 }
