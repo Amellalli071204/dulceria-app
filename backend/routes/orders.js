@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Order = require('../models/Order'); // Asegúrate que el archivo se llame Order.js
-const Product = require('../models/Product'); // Asegúrate que el archivo se llame Product.js
+const Order = require('../models/Order'); 
+const Product = require('../models/Product'); 
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
@@ -77,6 +77,27 @@ router.patch('/:id/status', async (req, res) => {
         res.json(updatedOrder);
     } catch (err) {
         res.status(500).json({ error: 'Error al actualizar estado' });
+    }
+});
+
+// 5. NUEVO: ENDPOINT PARA ESTADÍSTICAS DEL DASHBOARD
+router.get('/stats', async (req, res) => {
+    try {
+        const stats = await Order.aggregate([
+            { $unwind: "$productos" },
+            { 
+                $group: { 
+                    _id: "$productos.nombre", 
+                    ventas: { $sum: "$productos.cantidad" } 
+                } 
+            },
+            { $project: { name: "$_id", ventas: 1, _id: 0 } },
+            { $sort: { ventas: -1 } },
+            { $limit: 5 }
+        ]);
+        res.json(stats);
+    } catch (err) {
+        res.status(500).json({ error: 'Error al generar estadísticas' });
     }
 });
 
