@@ -21,16 +21,22 @@ mongoose.connect(mongoUri)
     .then(() => console.log("🟢 Conectado a MongoDB"))
     .catch((err) => console.error("🔴 Error en MongoDB:", err));
 
-// --- RUTAS DE LA API ---
+// --- RUTAS DE LA API (ORDEN CRÍTICO) ---
+// Primero declaramos las rutas de la API para que tengan prioridad
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/users', require('./routes/users'));
 
-// --- RUTA RAIZ (CORREGIDA PARA NODE v22) ---
-// Cambiamos el '*' por '(.*)' que es como lo pide la nueva versión
+// --- RUTA RAIZ ---
+// Usamos una ruta simple para evitar el error de PathError
 app.get('/', (req, res) => {
     res.json({ message: "¡Backend de Dulce Mundo encendido! 🍭", status: "ok" });
+});
+
+// Ruta de fallback para cualquier otra cosa que no sea API
+app.get('/health', (req, res) => {
+    res.json({ status: "alive" });
 });
 
 // --- INICIAR SERVIDOR ---
