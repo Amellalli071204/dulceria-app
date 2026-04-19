@@ -31,7 +31,7 @@ router.post('/create_preference', async (req, res) => {
     }
 });
 
-// 2. GUARDAR PEDIDO Y DESCONTAR STOCK
+// 2. GUARDAR PEDIDO
 router.post('/', async (req, res) => {
     try {
         const { productos } = req.body;
@@ -70,9 +70,7 @@ router.patch('/:id/status', async (req, res) => {
         const { id } = req.params;
         const { nuevoEstado } = req.body;
         const updatedOrder = await Order.findByIdAndUpdate(
-            id,
-            { estado: nuevoEstado },
-            { new: true }
+            id, { estado: nuevoEstado }, { new: true }
         );
         res.json(updatedOrder);
     } catch (err) {
@@ -80,26 +78,25 @@ router.patch('/:id/status', async (req, res) => {
     }
 });
 
-// 5. ESTADÍSTICAS (EL MOTOR DE LA GRÁFICA)
+// 5. MOTOR DE ESTADÍSTICAS (VERSION ULTRA-FLEXIBLE)
 router.get('/stats', async (req, res) => {
     try {
         const stats = await Order.aggregate([
-            { $unwind: "$productos" },
+            { $unwind: "$productos" }, // Rompe el array de productos
             { 
                 $group: { 
-                    _id: "$productos.nombre", 
+                    _id: "$productos.nombre", // Agrupa por el nombre exacto que pusiste en el modelo
                     ventas: { $sum: "$productos.cantidad" } 
                 } 
             },
-            { $project: { name: "$_id", ventas: 1, _id: 0 } },
+            { $match: { "ventas": { $gt: 0 } } }, // Solo lo que tenga ventas
+            { $project: { name: "$_id", ventas: 1, _id: 0 } }, // Formato para Recharts
             { $sort: { ventas: -1 } },
             { $limit: 5 }
         ]);
-        console.log("Datos enviados a la gráfica:", stats); // Para depuración
         res.json(stats);
     } catch (err) {
-        console.error("Error en aggregate:", err);
-        res.status(500).json({ error: 'Error al generar estadísticas' });
+        res.status(500).json({ error: 'Error en stats' });
     }
 });
 
