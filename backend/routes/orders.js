@@ -36,7 +36,9 @@ router.post('/', async (req, res) => {
         const savedOrder = await newOrder.save();
         if (req.body.productos) {
             for (const item of req.body.productos) {
-                await Product.findByIdAndUpdate(item.productoId, { $inc: { existencias: -Number(item.cantidad) } });
+                if(item.productoId) {
+                    await Product.findByIdAndUpdate(item.productoId, { $inc: { existencias: -Number(item.cantidad) } });
+                }
             }
         }
         res.status(201).json(savedOrder);
@@ -51,41 +53,50 @@ router.get('/', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error al obtener' }); }
 });
 
-// 4. ACTUALIZAR ESTADO (Arreglado para evitar el Warning de Mongoose)
+// 4. ACTUALIZAR ESTADO
 router.patch('/:id/status', async (req, res) => {
     try {
         const updated = await Order.findByIdAndUpdate(
             req.params.id, 
             { estado: req.body.nuevoEstado }, 
-            { returnDocument: 'after' } // Esto quita el Warning de tus logs
+            { returnDocument: 'after' }
         );
         res.json(updated);
     } catch (err) { res.status(500).json({ error: 'Error' }); }
 });
 
-// 5. ESTADÍSTICAS (FORZADO)
+// 5. ESTADÍSTICAS (VERSIÓN COMPATIBLE CON TU BD 🍭)
 router.get('/stats', async (req, res) => {
     try {
         const orders = await Order.find().lean();
         const sales = {};
         
         orders.forEach(order => {
-            if (order.productos) {
-                order.productos.forEach(p => {
-                    const n = p.nombre || "Dulce";
-                    const c = Number(p.cantidad) || 0;
-                    sales[n] = (sales[n] || 0) + c;
-                });
-            }
+            // Verificamos que exista el array de productos
+            const items = order.productos || [];
+            
+            items.forEach(p => {
+                // Sacamos el nombre y la cantidad asegurando que sean válidos
+                const nombre = p.nombre || "Dulce";
+                const cant = parseInt(p.cantidad) || 0;
+                
+                if (cant > 0) {
+                    sales[nombre] = (sales[nombre] || 0) + cant;
+                }
+            });
         });
 
+        // Convertimos a formato Recharts
         const result = Object.keys(sales).map(name => ({
             name: name,
             ventas: sales[name]
-        })).sort((a, b) => b.ventas - a.ventas).slice(0, 5);
+        }))
+        .sort((a, b) => b.ventas - a.ventas)
+        .slice(0, 5);
 
         res.json(result);
     } catch (err) {
+        console.error("Error stats:", err);
         res.json([]);
     }
 });
