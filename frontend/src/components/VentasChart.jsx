@@ -11,12 +11,19 @@ export default function VentasChart() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Ponemos la URL completa a mano para asegurar conexión directa
         const res = await axios.get('https://humorous-nourishment-production.up.railway.app/api/orders/stats');
-        if (res.data && Array.isArray(res.data)) {
+        
+        console.log("CHISMOSO - Datos recibidos del backend:", res.data);
+        
+        if (res.data && res.data.length > 0) {
           setData(res.data);
+        } else {
+          console.warn("CHISMOSO - El backend respondió vacío []");
+          setData([]);
         }
       } catch (err) {
-        console.error("Error trayendo estadísticas:", err);
+        console.error("CHISMOSO - Error en la petición axios:", err);
       } finally {
         setLoading(false);
       }
@@ -24,11 +31,9 @@ export default function VentasChart() {
     fetchStats();
   }, []);
 
-  if (loading) return (
-    <div style={{ height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#BA68C8', fontFamily: 'Fredoka One' }}>Preparando tus dulces datos... 🍭</p>
-    </div>
-  );
+  if (loading) return <div style={{height:'350px', display:'flex', alignItems:'center', justifyContent:'center'}}>
+    <p style={{color:'#BA68C8'}}>Cargando dulces estadísticas... 🍭</p>
+  </div>;
 
   return (
     <div style={chartContainerStyle}>
@@ -39,15 +44,15 @@ export default function VentasChart() {
       <div style={{ width: '100%', height: '350px' }}>
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+            <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} style={{ fontSize: '12px', fontWeight: 'bold' }} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
               <YAxis axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
               <Tooltip 
                 contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
                 cursor={{ fill: 'rgba(240, 98, 146, 0.1)' }}
               />
-              <Bar dataKey="ventas" radius={[10, 10, 0, 0]} barSize={45}>
+              <Bar dataKey="ventas" radius={[10, 10, 0, 0]} barSize={40}>
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
@@ -55,8 +60,8 @@ export default function VentasChart() {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: '#999' }}>Aún no hay pedidos registrados para mostrar gráficas 📊</p>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #eee', borderRadius: '15px' }}>
+            <p style={{ color: '#999' }}>El backend dice que no hay ventas aún. 🍬</p>
           </div>
         )}
       </div>
@@ -69,6 +74,5 @@ const chartContainerStyle = {
   padding: '25px',
   borderRadius: '20px',
   boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-  marginTop: '20px',
-  border: '1px solid #fce4ec'
+  marginTop: '20px'
 };
