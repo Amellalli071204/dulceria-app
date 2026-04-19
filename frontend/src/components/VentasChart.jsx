@@ -11,11 +11,18 @@ export default function VentasChart() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Usamos la URL de producción que ya tienes configurada
+        // Usamos la URL de producción de tu API en Railway
         const res = await axios.get('https://humorous-nourishment-production.up.railway.app/api/orders/stats');
-        setData(Array.isArray(res.data) ? res.data : []);
+        
+        // Validamos que la respuesta sea un array antes de guardarla
+        if (res.data && Array.isArray(res.data)) {
+          setData(res.data);
+        } else {
+          setData([]);
+        }
       } catch (err) {
         console.error("Error al traer estadísticas:", err);
+        setData([]);
       } finally {
         setLoading(false);
       }
@@ -23,7 +30,7 @@ export default function VentasChart() {
     fetchStats();
   }, []);
 
-  if (loading) return <p style={{ textAlign: 'center', color: '#BA68C8' }}>Cargando estadísticas... 🍭</p>;
+  if (loading) return <p style={{ textAlign: 'center', color: '#BA68C8', padding: '20px' }}>Cargando estadísticas... 🍭</p>;
 
   return (
     <div style={chartContainerStyle}>
@@ -36,21 +43,33 @@ export default function VentasChart() {
         Top 5 Dulces Más Vendidos 🍭
       </h3>
       
-      {/* ESTA ES LA PARTE IMPORTANTE: 
-          Le damos un alto fijo (height: 350px) para que Recharts 
-          sepa cuánto medir y no tire el error de width/height -1.
+      {/* SOLUCIÓN AL ERROR width(-1): 
+        Definimos un alto fijo (minHeight) para que el ResponsiveContainer 
+        tenga un espacio real donde dibujarse.
       */}
-      <div style={{ width: '100%', height: '350px' }}>
+      <div style={{ width: '100%', height: '350px', minHeight: '350px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <BarChart 
+            data={data} 
+            margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+          >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} />
-            <YAxis axisLine={false} tickLine={false} />
+            <XAxis 
+              dataKey="name" 
+              axisLine={false} 
+              tickLine={false} 
+              style={{ fontSize: '12px', fontWeight: 'bold' }}
+            />
+            <YAxis 
+              axisLine={false} 
+              tickLine={false} 
+              style={{ fontSize: '12px' }}
+            />
             <Tooltip 
               contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
               cursor={{ fill: 'rgba(240, 98, 146, 0.1)' }}
             />
-            <Bar dataKey="ventas" radius={[10, 10, 0, 0]}>
+            <Bar dataKey="ventas" radius={[10, 10, 0, 0]} barSize={40}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
@@ -58,6 +77,12 @@ export default function VentasChart() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      
+      {data.length === 0 && (
+        <p style={{ textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>
+          Aún no hay ventas registradas para mostrar.
+        </p>
+      )}
     </div>
   );
 }
@@ -68,5 +93,5 @@ const chartContainerStyle = {
   borderRadius: '20px',
   boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
   marginTop: '20px',
-  border: '1px solid #eee' // Para que combine con tu panel
+  border: '1px solid #fce4ec'
 };
