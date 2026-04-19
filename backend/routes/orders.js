@@ -51,42 +51,42 @@ router.get('/', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error al obtener' }); }
 });
 
-// 4. ACTUALIZAR ESTADO
+// 4. ACTUALIZAR ESTADO (Arreglado para evitar el Warning de Mongoose)
 router.patch('/:id/status', async (req, res) => {
     try {
-        const updated = await Order.findByIdAndUpdate(req.params.id, { estado: req.body.nuevoEstado }, { new: true });
+        const updated = await Order.findByIdAndUpdate(
+            req.params.id, 
+            { estado: req.body.nuevoEstado }, 
+            { returnDocument: 'after' } // Esto quita el Warning de tus logs
+        );
         res.json(updated);
     } catch (err) { res.status(500).json({ error: 'Error' }); }
 });
 
-// 5. ESTADÍSTICAS (VERSIÓN SIMPLIFICADA ANTI-ERRORES)
+// 5. ESTADÍSTICAS (FORZADO)
 router.get('/stats', async (req, res) => {
     try {
-        const allOrders = await Order.find().lean(); // .lean() hace que sea más rápido y fácil de leer
-        const salesMap = {};
-
-        allOrders.forEach(order => {
-            if (order.productos && Array.isArray(order.productos)) {
+        const orders = await Order.find().lean();
+        const sales = {};
+        
+        orders.forEach(order => {
+            if (order.productos) {
                 order.productos.forEach(p => {
-                    const nombre = p.nombre || "Dulce";
-                    const cantidad = Number(p.cantidad) || 0;
-                    if (cantidad > 0) {
-                        salesMap[nombre] = (salesMap[nombre] || 0) + cantidad;
-                    }
+                    const n = p.nombre || "Dulce";
+                    const c = Number(p.cantidad) || 0;
+                    sales[n] = (sales[n] || 0) + c;
                 });
             }
         });
 
-        const stats = Object.keys(salesMap).map(name => ({
+        const result = Object.keys(sales).map(name => ({
             name: name,
-            ventas: salesMap[name]
+            ventas: sales[name]
         })).sort((a, b) => b.ventas - a.ventas).slice(0, 5);
 
-        // Si no hay nada, mandamos un array vacío para que el frontend sepa qué hacer
-        res.status(200).json(stats || []);
+        res.json(result);
     } catch (err) {
-        console.error("Error en stats:", err);
-        res.status(200).json([]); // Mandamos array vacío en lugar de error para no romper el front
+        res.json([]);
     }
 });
 
