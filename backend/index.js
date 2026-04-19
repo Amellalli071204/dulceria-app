@@ -5,42 +5,37 @@ const cors = require('cors');
 
 const app = express();
 
-// 1. Configuración de CORS total
 app.use(cors());
 app.use(express.json());
 
-// 2. Conexión a Base de Datos
 const mongoUri = process.env.MONGO_URI;
 mongoose.connect(mongoUri)
-    .then(() => console.log("🟢 Base de datos conectada"))
+    .then(() => console.log("🟢 DB Conectada"))
     .catch((err) => console.error("🔴 Error DB:", err));
 
-// 3. LAS RUTAS DE LA API (IMPORTANTE: Deben ir antes que cualquier otra cosa)
-// Agregamos un log para ver si la petición entra aquí
-app.use('/api/orders', (req, res, next) => {
-    console.log(`Petición recibida en API Orders: ${req.method} ${req.url}`);
-    next();
-}, require('./routes/orders'));
+// IMPORTAMOS LAS RUTAS
+const orderRoutes = require('./routes/orders');
 
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/users', require('./routes/users'));
+// LAS RUTAS DE LA API CON UN PREFIJO DIFERENTE PARA QUE NO CHOQUEN
+app.use('/api-v1/orders', orderRoutes);
+app.use('/api-v1/auth', require('./routes/auth'));
+app.use('/api-v1/products', require('./routes/products'));
+app.use('/api-v1/users', require('./routes/users'));
 
-// 4. Ruta de prueba directa (Sin /api) para ver si el server responde
-app.get('/test-stats', async (req, res) => {
+// RUTA DE PRUEBA ABSOLUTA
+app.get('/debug-stats', async (req, res) => {
     try {
         const Order = require('./models/Order');
         const orders = await Order.find().lean();
-        res.json({ mensaje: "Conexión directa exitosa", total: orders.length });
+        res.json({ status: "ok", dataRecuperada: orders.length });
     } catch (e) {
         res.json({ error: e.message });
     }
 });
 
-// 5. Ruta base
 app.get('/', (req, res) => {
-    res.json({ status: "ok", message: "Servidor de Dulce Mundo activo 🍭" });
+    res.json({ message: "Backend vivo 🍭" });
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`🚀 Puerto: ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Corriendo en ${PORT}`));
