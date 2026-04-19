@@ -5,37 +5,38 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors());
+// CORS ABIERTO PARA PRUEBAS (Evita el bloqueo 404/CORS)
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 const mongoUri = process.env.MONGO_URI;
 mongoose.connect(mongoUri)
-    .then(() => console.log("🟢 DB Conectada"))
+    .then(() => console.log("🟢 MongoDB Conectado"))
     .catch((err) => console.error("🔴 Error DB:", err));
 
-// IMPORTAMOS LAS RUTAS
+// IMPORTAMOS RUTAS
 const orderRoutes = require('./routes/orders');
 
-// LAS RUTAS DE LA API CON UN PREFIJO DIFERENTE PARA QUE NO CHOQUEN
-app.use('/api-v1/orders', orderRoutes);
-app.use('/api-v1/auth', require('./routes/auth'));
-app.use('/api-v1/products', require('./routes/products'));
-app.use('/api-v1/users', require('./routes/users'));
+// USAMOS UN PREFIJO QUE NADIE MÁS TENGA
+app.use('/api-dulceria/orders', orderRoutes);
+app.use('/api-dulceria/auth', require('./routes/auth'));
+app.use('/api-dulceria/products', require('./routes/products'));
+app.use('/api-dulceria/users', require('./routes/users'));
 
-// RUTA DE PRUEBA ABSOLUTA
-app.get('/debug-stats', async (req, res) => {
+// RUTA DE DEPURACIÓN PARA TI
+app.get('/api-dulceria/debug', async (req, res) => {
     try {
         const Order = require('./models/Order');
-        const orders = await Order.find().lean();
-        res.json({ status: "ok", dataRecuperada: orders.length });
+        const count = await Order.countDocuments();
+        res.json({ status: "ok", pedidosEnBase: count });
     } catch (e) {
-        res.json({ error: e.message });
+        res.status(500).json({ error: e.message });
     }
 });
 
 app.get('/', (req, res) => {
-    res.json({ message: "Backend vivo 🍭" });
+    res.send("Backend de Dulce Mundo funcionando 🍭");
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`🚀 Corriendo en ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
