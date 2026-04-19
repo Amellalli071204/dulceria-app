@@ -59,35 +59,34 @@ router.patch('/:id/status', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error' }); }
 });
 
-// 5. ESTADÍSTICAS (LOGICA DE RESPALDO TOTAL)
+// 5. ESTADÍSTICAS (VERSIÓN SIMPLIFICADA ANTI-ERRORES)
 router.get('/stats', async (req, res) => {
     try {
-        // Obtenemos todos los pedidos para procesarlos manualmente si es necesario
-        const allOrders = await Order.find();
+        const allOrders = await Order.find().lean(); // .lean() hace que sea más rápido y fácil de leer
         const salesMap = {};
 
         allOrders.forEach(order => {
             if (order.productos && Array.isArray(order.productos)) {
                 order.productos.forEach(p => {
-                    const nombre = p.nombre || "Desconocido";
+                    const nombre = p.nombre || "Dulce";
                     const cantidad = Number(p.cantidad) || 0;
-                    salesMap[nombre] = (salesMap[nombre] || 0) + cantidad;
+                    if (cantidad > 0) {
+                        salesMap[nombre] = (salesMap[nombre] || 0) + cantidad;
+                    }
                 });
             }
         });
 
-        // Convertimos el mapa de ventas al formato que Recharts necesita
-        const stats = Object.keys(salesMap)
-            .map(name => ({ name, ventas: salesMap[name] }))
-            .filter(item => item.ventas > 0)
-            .sort((a, b) => b.ventas - a.ventas)
-            .slice(0, 5);
+        const stats = Object.keys(salesMap).map(name => ({
+            name: name,
+            ventas: salesMap[name]
+        })).sort((a, b) => b.ventas - a.ventas).slice(0, 5);
 
-        console.log("Stats finales procesadas:", stats);
-        res.json(stats);
+        // Si no hay nada, mandamos un array vacío para que el frontend sepa qué hacer
+        res.status(200).json(stats || []);
     } catch (err) {
-        console.error("Error en stats manuales:", err);
-        res.status(500).json({ error: 'Error al generar stats' });
+        console.error("Error en stats:", err);
+        res.status(200).json([]); // Mandamos array vacío en lugar de error para no romper el front
     }
 });
 
