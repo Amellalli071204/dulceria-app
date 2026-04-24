@@ -65,28 +65,23 @@ router.patch('/:id/status', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error' }); }
 });
 
-// 5. ESTADÍSTICAS (VERSIÓN COMPATIBLE CON TU BD 🍭)
+// 5. ESTADÍSTICAS (Corregido para visualización en Admin)
 router.get('/stats', async (req, res) => {
     try {
         const orders = await Order.find().lean();
         const sales = {};
         
         orders.forEach(order => {
-            // Verificamos que exista el array de productos
             const items = order.productos || [];
-            
             items.forEach(p => {
-                // Sacamos el nombre y la cantidad asegurando que sean válidos
                 const nombre = p.nombre || "Dulce";
                 const cant = parseInt(p.cantidad) || 0;
-                
                 if (cant > 0) {
                     sales[nombre] = (sales[nombre] || 0) + cant;
                 }
             });
         });
 
-        // Convertimos a formato Recharts
         const result = Object.keys(sales).map(name => ({
             name: name,
             ventas: sales[name]

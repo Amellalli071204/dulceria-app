@@ -5,7 +5,7 @@ const cors = require('cors');
 
 const app = express();
 
-// CORS ABIERTO PARA PRUEBAS (Evita el bloqueo 404/CORS)
+// Configuración de CORS y JSON
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
@@ -14,17 +14,14 @@ mongoose.connect(mongoUri)
     .then(() => console.log("🟢 MongoDB Conectado"))
     .catch((err) => console.error("🔴 Error DB:", err));
 
-// IMPORTAMOS RUTAS
-const orderRoutes = require('./routes/orders');
+// IMPORTACIÓN Y USO DE RUTAS UNIFICADAS
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/products', require('./routes/products'));
+app.use('/api/users', require('./routes/users'));
 
-// USAMOS UN PREFIJO QUE NADIE MÁS TENGA
-app.use('/api-dulceria/orders', orderRoutes);
-app.use('/api-dulceria/auth', require('./routes/auth'));
-app.use('/api-dulceria/products', require('./routes/products'));
-app.use('/api-dulceria/users', require('./routes/users'));
-
-// RUTA DE DEPURACIÓN PARA TI
-app.get('/api-dulceria/debug', async (req, res) => {
+// Ruta de depuración actualizada
+app.get('/api/debug', async (req, res) => {
     try {
         const Order = require('./models/Order');
         const count = await Order.countDocuments();
