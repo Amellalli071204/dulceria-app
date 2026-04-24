@@ -6,35 +6,73 @@ const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
-// 1. MERCADO PAGO
+// 1. MERCADO PAGO: Crear preferencia con vinculación de ID de pedido
 router.post('/create_preference', async (req, res) => {
     try {
+        const { items, orderId } = req.body; // Recibimos el ID del pedido generado en el frontend
         const body = {
-            items: req.body.items.map(item => ({
+            items: items.map(item => ({
                 title: item.nombre,
                 quantity: Number(item.cantidad),
                 unit_price: Number(item.precio),
                 currency_id: 'MXN',
             })),
+            external_reference: orderId, // Vincula el ID de MongoDB con Mercado Pago
+            notification_url: "https://humorous-nourishment-production.up.railway.app/api/orders/webhook",
             back_urls: {
-                success: "https://humorous-nourishment-production.up.railway.app/success",
-                failure: "https://humorous-nourishment-production.up.railway.app/failure",
-                pending: "https://humorous-nourishment-production.up.railway.app/pending"
+                success: "https://humorous-nourishment-production.up.railway.app/catalogo",
+                failure: "https://humorous-nourishment-production.up.railway.app/carrito",
+                pending: "https://humorous-nourishment-production.up.railway.app/catalogo"
             },
             auto_return: "approved",
         };
         const preference = new Preference(client);
         const result = await preference.create({ body });
         res.json({ id: result.id });
-    } catch (error) { res.status(500).json({ error: 'Error MP' }); }
+    } catch (error) { 
+        console.error("Error al crear preferencia:", error);
+        res.status(500).json({ error: 'Error MP' }); 
+    }
 });
 
-// 2. GUARDAR PEDIDO
+// 2. WEBHOOK: Recibir notificaciones de Mercado Pago (Automatización)
+router.post('/webhook', async (req, res) => {
+    const { query } = req;
+    const topic = query.topic || query.type;
+
+    try {
+        if (topic === 'payment') {
+            const paymentId = query.id || query['data.id'];
+            
+            // Consultar el estado real del pago en la API de Mercado Pago
+            const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+                headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }
+            });
+            const paymentData = await response.json();
+
+            // Si el pago está aprobado, actualizamos el estado e inventario
+            if (paymentData.status === 'approved') {
+                const orderId = paymentData.external_reference; 
+                
+                await Order.findByIdAndUpdate(orderId, { estado: 'pagado' });
+                console.log(`✅ Pedido ${orderId} actualizado a PAGADO vía Webhook`);
+            }
+        }
+        res.sendStatus(200); // Siempre responder 200 a Mercado Pago
+    } catch (error) {
+        console.error("🔴 Error en Webhook:", error);
+        res.sendStatus(500);
+    }
+});
+
+// 3. GUARDAR PEDIDO (Efectivo o inicio de Digital)
 router.post('/', async (req, res) => {
     try {
         const newOrder = new Order(req.body);
         const savedOrder = await newOrder.save();
-        if (req.body.productos) {
+        
+        // Si es efectivo, descontamos stock de inmediato
+        if (req.body.metodoPago === 'efectivo' && req.body.productos) {
             for (const item of req.body.productos) {
                 if(item.productoId) {
                     await Product.findByIdAndUpdate(item.productoId, { $inc: { existencias: -Number(item.cantidad) } });
@@ -45,7 +83,7 @@ router.post('/', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error al guardar' }); }
 });
 
-// 3. OBTENER PEDIDOS
+// 4. OBTENER PEDIDOS (Admin)
 router.get('/', async (req, res) => {
     try {
         const orders = await Order.find().sort({ fecha: -1 });
@@ -53,7 +91,7 @@ router.get('/', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error al obtener' }); }
 });
 
-// 4. ACTUALIZAR ESTADO
+// 5. ACTUALIZAR ESTADO MANUAL
 router.patch('/:id/status', async (req, res) => {
     try {
         const updated = await Order.findByIdAndUpdate(
@@ -65,7 +103,7 @@ router.patch('/:id/status', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error' }); }
 });
 
-// 5. ESTADÍSTICAS (Corregido para visualización en Admin)
+// 6. ESTADÍSTICAS (Top 5)
 router.get('/stats', async (req, res) => {
     try {
         const orders = await Order.find().lean();
@@ -91,7 +129,6 @@ router.get('/stats', async (req, res) => {
 
         res.json(result);
     } catch (err) {
-        console.error("Error stats:", err);
         res.json([]);
     }
 });
