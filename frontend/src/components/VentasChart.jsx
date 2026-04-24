@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
+const apiUrl = import.meta.env.VITE_API_URL;
 const COLORS = ['#F06292', '#BA68C8', '#FF80AB', '#CE93D8', '#F48FB1'];
 
 export default function VentasChart() {
@@ -11,15 +12,15 @@ export default function VentasChart() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // USAMOS RUTA RELATIVA PARA EVITAR EL ERROR 404 DE DOMINIO
-        const res = await axios.get('/api-dulceria/orders/stats');
-        console.log("DULCES RECIBIDOS:", res.data);
+        // Unificado a la ruta /api/orders/stats
+        const res = await axios.get(`${apiUrl}/api/orders/stats`);
+        console.log("DULCES RECIBIDOS PARA GRÁFICA:", res.data);
         
         if (Array.isArray(res.data)) {
           setData(res.data);
         }
       } catch (err) {
-        console.error("ERROR AL TRAER GRAFICA:", err);
+        console.error("ERROR AL TRAER GRÁFICA:", err);
       } finally {
         setLoading(false);
       }
