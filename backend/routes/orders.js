@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const Order = require('../models/Order'); 
-const Product = require('../models/Product'); 
+const Order = require('../models/Order');
+const Product = require('../models/Product');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
-// 1. MERCADO PAGO: Crear preferencia con vinculación de ID de pedido
+// 1. MERCADO PAGO: Crear preferencia
 router.post('/create_preference', async (req, res) => {
     try {
-        const { items, orderId } = req.body; // Recibimos el ID del pedido generado en el frontend
+        const { items, orderId } = req.body;
         const body = {
             items: items.map(item => ({
                 title: item.nombre,
@@ -17,8 +17,7 @@ router.post('/create_preference', async (req, res) => {
                 unit_price: Number(item.precio),
                 currency_id: 'MXN',
             })),
-            external_reference: orderId, // Vincula el ID de MongoDB con Mercado Pago
-            notification_url: "https://humorous-nourishment-production.up.railway.app/api/orders/webhook",
+            external_reference: orderId,
             back_urls: {
                 success: "https://humorous-nourishment-production.up.railway.app/catalogo",
                 failure: "https://humorous-nourishment-production.up.railway.app/carrito",
@@ -29,36 +28,44 @@ router.post('/create_preference', async (req, res) => {
         const preference = new Preference(client);
         const result = await preference.create({ body });
         res.json({ id: result.id });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error al crear preferencia:", error);
-        res.status(500).json({ error: 'Error MP' }); 
+        res.status(500).json({ error: 'Error MP' });
     }
 });
 
-// 2. WEBHOOK: Recibir notificaciones de Mercado Pago (Automatización)
+// 2. WEBHOOK: Actualización automática e inventario
 router.post('/webhook', async (req, res) => {
-    const { query } = req;
-    const topic = query.topic || query.type;
+    const { data, type } = req.body;
+
+    if (type !== 'payment') return res.sendStatus(200);
 
     try {
-        if (topic === 'payment') {
-            const paymentId = query.id || query['data.id'];
-            
-            // Consultar el estado real del pago en la API de Mercado Pago
-            const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-                headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }
-            });
-            const paymentData = await response.json();
+        // Consultar el estado real en MP
+        const response = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+            headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }
+        });
+        const paymentData = await response.json();
 
-            // Si el pago está aprobado, actualizamos el estado e inventario
-            if (paymentData.status === 'approved') {
-                const orderId = paymentData.external_reference; 
-                
-                await Order.findByIdAndUpdate(orderId, { estado: 'pagado' });
-                console.log(`✅ Pedido ${orderId} actualizado a PAGADO vía Webhook`);
+        if (paymentData.status === 'approved') {
+            const orderId = paymentData.external_reference;
+            const order = await Order.findById(orderId);
+
+            // IDEMPOTENCIA: Solo procesar si el pedido existe y no ha sido pagado aún
+            if (order && order.estado !== 'pagado') {
+                order.estado = 'pagado';
+                await order.save();
+
+                // DESCONTAR STOCK
+                for (const item of order.productos) {
+                    await Product.findByIdAndUpdate(item.productoId, { 
+                        $inc: { existencias: -Number(item.cantidad) } 
+                    });
+                }
+                console.log(`✅ Pedido ${orderId} procesado: Stock descontado`);
             }
         }
-        res.sendStatus(200); // Siempre responder 200 a Mercado Pago
+        res.sendStatus(200);
     } catch (error) {
         console.error("🔴 Error en Webhook:", error);
         res.sendStatus(500);
@@ -71,7 +78,6 @@ router.post('/', async (req, res) => {
         const newOrder = new Order(req.body);
         const savedOrder = await newOrder.save();
         
-        // Si es efectivo, descontamos stock de inmediato
         if (req.body.metodoPago === 'efectivo' && req.body.productos) {
             for (const item of req.body.productos) {
                 if(item.productoId) {
@@ -83,7 +89,7 @@ router.post('/', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Error al guardar' }); }
 });
 
-// 4. OBTENER PEDIDOS (Admin)
+// 4. OBTENER PEDIDOS
 router.get('/', async (req, res) => {
     try {
         const orders = await Order.find().sort({ fecha: -1 });
@@ -94,43 +100,25 @@ router.get('/', async (req, res) => {
 // 5. ACTUALIZAR ESTADO MANUAL
 router.patch('/:id/status', async (req, res) => {
     try {
-        const updated = await Order.findByIdAndUpdate(
-            req.params.id, 
-            { estado: req.body.nuevoEstado }, 
-            { returnDocument: 'after' }
-        );
+        const updated = await Order.findByIdAndUpdate(req.params.id, { estado: req.body.nuevoEstado }, { returnDocument: 'after' });
         res.json(updated);
     } catch (err) { res.status(500).json({ error: 'Error' }); }
 });
 
-// 6. ESTADÍSTICAS (Top 5)
+// 6. ESTADÍSTICAS
 router.get('/stats', async (req, res) => {
     try {
         const orders = await Order.find().lean();
         const sales = {};
-        
         orders.forEach(order => {
-            const items = order.productos || [];
-            items.forEach(p => {
-                const nombre = p.nombre || "Dulce";
-                const cant = parseInt(p.cantidad) || 0;
-                if (cant > 0) {
-                    sales[nombre] = (sales[nombre] || 0) + cant;
-                }
+            (order.productos || []).forEach(p => {
+                sales[p.nombre] = (sales[p.nombre] || 0) + (parseInt(p.cantidad) || 0);
             });
         });
-
-        const result = Object.keys(sales).map(name => ({
-            name: name,
-            ventas: sales[name]
-        }))
-        .sort((a, b) => b.ventas - a.ventas)
-        .slice(0, 5);
-
+        const result = Object.keys(sales).map(name => ({ name, ventas: sales[name] }))
+            .sort((a, b) => b.ventas - a.ventas).slice(0, 5);
         res.json(result);
-    } catch (err) {
-        res.json([]);
-    }
+    } catch (err) { res.json([]); }
 });
 
 module.exports = router;
