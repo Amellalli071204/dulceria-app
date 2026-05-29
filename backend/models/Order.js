@@ -14,7 +14,9 @@ const OrderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   metodoPago: { type: String, enum: ['efectivo', 'mercadopago'], required: true },
   estado: { type: String, default: 'pendiente' }, // pendiente, pagado, entregado
+  payment_id: { type: String, default: null }, // Para guardar el ID de pago de Mercado Pago
   fecha: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('Order', OrderSchema);
+
