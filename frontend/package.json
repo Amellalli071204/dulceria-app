@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@mercadopago/sdk-react": "^1.0.7",
+    "@yudiel/react-qr-scanner": "^2.6.0",
     "axios": "^1.13.5",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",

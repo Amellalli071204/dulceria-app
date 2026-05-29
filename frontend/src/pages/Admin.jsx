@@ -4,7 +4,8 @@ import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar, FaUserLock, F
 import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import VentasChart from '../components/VentasChart'; // Importación verificada
+import VentasChart from '../components/VentasChart';
+import { Scanner } from '@yudiel/react-qr-scanner'; // <-- NUEVA IMPORTACIÓN
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -12,6 +13,7 @@ export default function Admin() {
     const [orders, setOrders] = useState([]);
     const [users, setUsers] = useState([]); 
     const [loadingId, setLoadingId] = useState(null);
+    const [mostrarEscaner, setMostrarEscaner] = useState(false); // <-- NUEVO ESTADO PARA LA CÁMARA
     const [newProduct, setNewProduct] = useState({ 
         nombre: '', descripcion: '', precio: '', imagen: '', existencias: '' 
     });
@@ -144,6 +146,33 @@ export default function Admin() {
         finally { setLoadingId(null); }
     };
 
+    // --- NUEVA FUNCIÓN: PROCESAR EL CÓDIGO QR ---
+    const handleEscanearQR = async (resultado) => {
+        if (resultado) {
+            const orderId = Array.isArray(resultado) ? resultado[0].rawValue : resultado;
+            setMostrarEscaner(false); // Apagamos la cámara
+            
+            try {
+                // Hacemos la misma petición que usarías al hacer clic en el botón de la tabla
+                await axios.patch(`${apiUrl}/api/orders/${orderId}/status`, { nuevoEstado: 'entregado' }, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Dulces Entregados! 🍬',
+                    text: 'El pedido ha sido escaneado y marcado como entregado exitosamente.',
+                    confirmButtonColor: '#9C27B0'
+                });
+                
+                fetchOrders(); // Actualizamos la tabla
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'Código QR no válido o el pedido ya fue entregado.', 'error');
+            }
+        }
+    };
+
     const handleAddProduct = async (e) => {
         e.preventDefault();
         try {
@@ -161,7 +190,7 @@ export default function Admin() {
                 Panel de Administración 🔐
             </h1>
 
-            {/* --- NUEVA GRÁFICA DE VENTAS (ESTADÍSTICAS) --- */}
+            {/* --- GRÁFICA DE VENTAS --- */}
             <div style={{ marginBottom: '40px' }}>
                 <VentasChart />
             </div>
@@ -202,6 +231,42 @@ export default function Admin() {
                         </div>
                     ))}
                 </div>
+            </div>
+
+            {/* --- NUEVA SECCIÓN ESCÁNER QR --- */}
+            <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+                <h2 style={{ color: '#E91E63', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                    📱 Entregas Rápidas por QR
+                </h2>
+                <button 
+                    onClick={() => setMostrarEscaner(!mostrarEscaner)}
+                    style={{
+                        padding: '12px 25px',
+                        background: mostrarEscaner ? '#BDBDBD' : '#4A148C',
+                        color: mostrarEscaner ? '#333' : 'white',
+                        border: 'none',
+                        borderRadius: '25px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                        transition: '0.3s'
+                    }}
+                >
+                    {mostrarEscaner ? '📷 Cancelar Escáner' : '📸 Escanear Ticket de Alumno'}
+                </button>
+
+                {mostrarEscaner && (
+                    <div style={{ maxWidth: '350px', margin: '20px auto', border: '4px solid #9C27B0', borderRadius: '15px', overflow: 'hidden', padding: '10px', background: '#f9f9f9' }}>
+                        <Scanner 
+                            onScan={(result) => handleEscanearQR(result)} 
+                            onError={(error) => console.log(error?.message)}
+                        />
+                        <p style={{ marginTop: '15px', color: '#E91E63', fontWeight: 'bold' }}>
+                            Apunta el QR del estudiante aquí
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* --- SECCIÓN PEDIDOS --- */}
