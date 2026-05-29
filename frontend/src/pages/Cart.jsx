@@ -15,26 +15,45 @@ export default function Cart() {
   const navigate = useNavigate();
 
   const handleMercadoPago = async () => {
-    try {
-      const res = await axios.post(`${apiUrl}/api/orders/create_preference`, {
-        items: cart.map(item => ({
-          nombre: item.nombre,
-          cantidad: item.qty,
-          precio: item.precio
-        }))
-      });
-      setPreferenceId(res.data.id);
-    } catch (error) {
-      console.error(error);
-      // Alerta de error de conexión
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de conexión',
-        text: 'No se pudo conectar con Mercado Pago',
-        confirmButtonColor: '#E91E63'
-      });
-    }
-  };
+  setIsProcessing(true);
+  try {
+    // 1. Crear el pedido en la DB primero
+    const res = await axios.post(`${apiUrl}/api/orders`, {
+      usuario: localStorage.getItem('userName') || "Cliente",
+      telefono: localStorage.getItem('userPhone') || "",
+      productos: cart.map(i => ({
+        productoId: i._id,
+        nombre: i.nombre,
+        cantidad: i.qty,
+        precio: i.precio
+      })),
+      total: totalPrice,
+      metodoPago: 'mercadopago',
+      estado: 'pendiente'
+    });
+
+    const orderId = res.data._id; // Obtenemos el ID del pedido recién creado
+
+    // 2. Crear la preferencia pasando el orderId
+    const mpRes = await axios.post(`${apiUrl}/api/orders/create_preference`, {
+      items: cart.map(item => ({
+        nombre: item.nombre,
+        cantidad: item.qty,
+        precio: item.precio
+      })),
+      orderId: orderId // <--- Vinculamos el pedido con la preferencia
+    });
+
+    setPreferenceId(mpRes.data.id);
+    clearCart(); // 3. Limpiamos el carrito al obtener el ID de preferencia
+
+  } catch (error) {
+    console.error(error);
+    Swal.fire('Error', 'No se pudo iniciar el pago', 'error');
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const handleCashPayment = async () => {
     if (isProcessing) return;
