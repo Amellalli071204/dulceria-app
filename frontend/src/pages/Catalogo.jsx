@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
 import Swal from 'sweetalert2';
@@ -6,75 +6,80 @@ import Swal from 'sweetalert2';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function Catalogo() {
-  const [productos, setProductos] = useState([]);
+  const [products, setProducts] = useState([]);
   const [busqueda, setBusqueda] = useState(""); // Estado para el buscador
-  
   const { addToCart } = useCart();
 
   useEffect(() => {
-    const fetchProductos = async () => {
-      try {
-        const res = await axios.get(`${apiUrl}/api/products`);
-        setProductos(res.data);
-      } catch (error) {
-        console.error("Error al cargar productos", error);
-      }
-    };
-    fetchProductos();
+    axios.get(`${apiUrl}/api/products`)
+      .then(res => setProducts(res.data))
+      .catch(err => console.error(err));
   }, []);
 
-  // Lógica que filtra en tiempo real
-  const productosFiltrados = productos.filter((producto) =>
-    producto.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  const handleAdd = (product) => {
+    addToCart(product);
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true
+    });
+    Toast.fire({
+      icon: 'success',
+      title: `${product.nombre} al carrito 🍬`
+    });
+  };
+
+  // Filtrado dinámico en tiempo real
+  const productosFiltrados = products.filter((p) =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   return (
-    <div style={containerStyle}>
-      <h1 style={titleStyle}>Catálogo de Dulces 🍬</h1>
+    <div style={{ padding: '1rem', marginTop: '70px' }}>
+      <h1 style={{ textAlign: 'center', color: '#E91E63', fontSize: '1.8rem', marginBottom: '15px' }}>
+        Nuestros Dulces 🍭
+      </h1>
 
-      {/* Barra de Búsqueda Dinámica */}
+      {/* Barra de Búsqueda */}
       <div style={searchContainerStyle}>
-        <input 
-          type="text" 
-          placeholder="🔍 Buscar por nombre (ej. Picafresa)..." 
+        <input
+          type="text"
+          placeholder="🔍 Buscar por nombre (ej. Picafresa)..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           style={searchInputStyle}
         />
       </div>
 
-      {/* Mensaje si no hay resultados o la cuadrícula de productos */}
       {productosFiltrados.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#757575', marginTop: '20px' }}>
           No encontramos dulces con ese nombre 😥
         </p>
       ) : (
         <div style={gridStyle}>
-          {productosFiltrados.map((producto) => (
-            <div key={producto._id} style={cardStyle}>
-              {/* Si tus productos tienen imagen, descomenta la siguiente línea */}
-              {/* <img src={producto.imagen} alt={producto.nombre} style={{ width: '100%', borderRadius: '8px' }} /> */}
+          {productosFiltrados.map(p => (
+            <div key={p._id} style={cardStyle}>
               
-              <h3 style={{ margin: '10px 0', color: '#4A148C' }}>{producto.nombre}</h3>
-              <p style={{ color: '#E91E63', fontWeight: 'bold', fontSize: '1.2rem' }}>${producto.precio} MXN</p>
-              <p style={{ fontSize: '0.9rem', color: '#757575' }}>Disponibles: {producto.existencias}</p>
+              {/* IMAGEN RESTAURADA CON TUS ESTILOS */}
+              <div style={imgContainer}>
+                <img src={p.imagen || '/placeholder.jpg'} alt={p.nombre} style={imgStyle} />
+              </div>
               
-              <button 
-                onClick={() => {
-                  addToCart(producto);
-                  Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: `${producto.nombre} agregado al carrito`,
-                    showConfirmButton: false,
-                    timer: 1500
-                  });
-                }} 
-                style={producto.existencias > 0 ? btnStyle : btnDisabledStyle}
-                disabled={producto.existencias <= 0}
+              <h4 style={titleStyle}>{p.nombre}</h4>
+              <p style={priceStyle}>${p.precio || p.price}</p>
+              <p style={stockStyle}>Stock: {p.existencias}</p>
+              
+              <button
+                onClick={() => handleAdd(p)}
+                disabled={p.existencias <= 0}
+                style={{
+                  ...btnStyle,
+                  background: p.existencias > 0 ? '#9C27B0' : '#ccc'
+                }}
               >
-                {producto.existencias > 0 ? '🛒 Agregar' : 'Agotado'}
+                {p.existencias > 0 ? 'Agregar' : 'Agotado'}
               </button>
             </div>
           ))}
@@ -84,74 +89,89 @@ export default function Catalogo() {
   );
 }
 
-// --- ESTILOS VISUALES ---
-const containerStyle = { 
-  padding: '2rem', 
-  maxWidth: '1200px', 
-  margin: '0 auto', 
-  marginTop: '60px',
-  fontFamily: 'system-ui, -apple-system, sans-serif'
-};
+// --- ESTILOS COMPACTOS (Catálogo + Buscador) ---
 
-const titleStyle = { 
-  textAlign: 'center', 
-  color: '#E91E63', 
-  marginBottom: '1rem',
-  fontSize: '2.5rem'
-};
-
-// Estilos específicos para la barra de búsqueda
 const searchContainerStyle = { 
   display: 'flex', 
   justifyContent: 'center', 
-  marginBottom: '2rem' 
+  marginBottom: '25px' 
 };
 
 const searchInputStyle = { 
   width: '100%', 
-  maxWidth: '500px', 
-  padding: '15px 25px', 
-  fontSize: '1.1rem', 
-  borderRadius: '30px', 
+  maxWidth: '400px', 
+  padding: '12px 20px', 
+  fontSize: '1rem', 
+  borderRadius: '25px', 
   border: '2px solid #9C27B0', 
   outline: 'none',
-  boxShadow: '0 4px 6px rgba(156, 39, 176, 0.1)',
-  transition: 'all 0.3s ease'
+  boxShadow: '0 4px 6px rgba(156, 39, 176, 0.1)'
 };
 
 const gridStyle = { 
   display: 'grid', 
-  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-  gap: '25px' 
+  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', 
+  gap: '15px', 
+  maxWidth: '1000px', 
+  margin: '0 auto' 
 };
 
 const cardStyle = { 
-  background: '#FFF0F5', 
-  padding: '20px', 
-  borderRadius: '15px', 
+  background: 'white', 
+  padding: '10px', 
+  borderRadius: '12px', 
   textAlign: 'center', 
-  boxShadow: '0 4px 8px rgba(0,0,0,0.08)', 
+  boxShadow: '0 4px 8px rgba(0,0,0,0.1)', 
+  border: '1px solid #FCE4EC', 
   display: 'flex', 
   flexDirection: 'column', 
-  justifyContent: 'space-between',
-  transition: 'transform 0.2s'
+  justifyContent: 'space-between' 
+};
+
+const imgContainer = { 
+  width: '100%', 
+  height: '110px', 
+  overflow: 'hidden', 
+  borderRadius: '8px', 
+  marginBottom: '8px' 
+};
+
+const imgStyle = { 
+  width: '100%', 
+  height: '100%', 
+  objectFit: 'cover' 
+};
+
+const titleStyle = { 
+  color: '#4A148C', 
+  fontSize: '0.95rem', 
+  margin: '5px 0', 
+  whiteSpace: 'nowrap', 
+  overflow: 'hidden', 
+  textOverflow: 'ellipsis' 
+};
+
+const priceStyle = { 
+  fontWeight: 'bold', 
+  fontSize: '1.1rem', 
+  color: '#E91E63', 
+  margin: '2px 0' 
+};
+
+const stockStyle = { 
+  fontSize: '0.75rem', 
+  color: '#666', 
+  marginBottom: '8px' 
 };
 
 const btnStyle = { 
-  padding: '12px', 
-  background: '#9C27B0', 
+  width: '100%', 
+  padding: '8px', 
   color: 'white', 
   border: 'none', 
-  borderRadius: '8px', 
+  borderRadius: '6px', 
   cursor: 'pointer', 
   fontWeight: 'bold', 
-  marginTop: '15px',
-  fontSize: '1rem',
-  transition: 'background 0.3s'
-};
-
-const btnDisabledStyle = { 
-  ...btnStyle, 
-  background: '#BDBDBD', 
-  cursor: 'not-allowed' 
+  fontSize: '0.85rem', 
+  transition: '0.2s' 
 };
