@@ -7,6 +7,7 @@ import Catalog from './pages/Catalogo';
 import Cart from './pages/Cart';
 import Admin from './pages/Admin';
 import Footer from './components/Footer';
+import Ticket from './pages/Ticket'; // <-- Agrega esta importación
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/catalogo" element={<Catalog />} />
             <Route path="/carrito" element={<Cart />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/ticket/:id" element={<Ticket />} />
           </Routes>
           
         </div>
