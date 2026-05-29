@@ -3,7 +3,7 @@ import { useCart } from '../context/CartContext';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2'; // <-- Importado
+import Swal from 'sweetalert2';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
@@ -15,45 +15,61 @@ export default function Cart() {
   const navigate = useNavigate();
 
   const handleMercadoPago = async () => {
-  setIsProcessing(true);
-  try {
-    // 1. Crear el pedido en la DB primero
-    const res = await axios.post(`${apiUrl}/api/orders`, {
-      usuario: localStorage.getItem('userName') || "Cliente",
-      telefono: localStorage.getItem('userPhone') || "",
-      productos: cart.map(i => ({
-        productoId: i._id,
-        nombre: i.nombre,
-        cantidad: i.qty,
-        precio: i.precio
-      })),
-      total: totalPrice,
-      metodoPago: 'mercadopago',
-      estado: 'pendiente'
-    });
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Inicia Sesión',
+        text: 'Debes estar registrado para realizar un pedido.',
+        confirmButtonColor: '#9C27B0'
+      });
+    }
 
-    const orderId = res.data._id; // Obtenemos el ID del pedido recién creado
+    if (isProcessing) return;
+    setIsProcessing(true);
 
-    // 2. Crear la preferencia pasando el orderId
-    const mpRes = await axios.post(`${apiUrl}/api/orders/create_preference`, {
-      items: cart.map(item => ({
-        nombre: item.nombre,
-        cantidad: item.qty,
-        precio: item.precio
-      })),
-      orderId: orderId // <--- Vinculamos el pedido con la preferencia
-    });
+    try {
+      // PASO 1: Crear el pedido en la DB con estado 'pendiente'
+      const orderRes = await axios.post(`${apiUrl}/api/orders`, {
+        usuario: localStorage.getItem('userName') || 'Cliente',
+        telefono: localStorage.getItem('userPhone') || '',
+        productos: cart.map(i => ({
+          productoId: i._id,
+          nombre: i.nombre,
+          cantidad: i.qty,
+          precio: i.precio
+        })),
+        total: totalPrice,
+        metodoPago: 'mercadopago'
+      });
 
-    setPreferenceId(mpRes.data.id);
-    clearCart(); // 3. Limpiamos el carrito al obtener el ID de preferencia
+      const orderId = orderRes.data._id;
 
-  } catch (error) {
-    console.error(error);
-    Swal.fire('Error', 'No se pudo iniciar el pago', 'error');
-  } finally {
-    setIsProcessing(false);
-  }
-};
+      // PASO 2: Crear preferencia de MP con el orderId como referencia externa
+      const prefRes = await axios.post(`${apiUrl}/api/orders/create_preference`, {
+        items: cart.map(item => ({
+          nombre: item.nombre,
+          cantidad: item.qty,
+          precio: item.precio
+        })),
+        orderId // El webhook usará este ID para actualizar el pedido y el inventario
+      });
+
+      // PASO 3: Mostrar el botón de Wallet (clearCart NO va aquí)
+      setPreferenceId(prefRes.data.id);
+
+    } catch (error) {
+      console.error(error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No se pudo conectar con Mercado Pago. Intenta de nuevo.',
+        confirmButtonColor: '#E91E63'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleCashPayment = async () => {
     if (isProcessing) return;
@@ -73,7 +89,7 @@ export default function Cart() {
       return Swal.fire({
         icon: 'error',
         title: 'Stock insuficiente',
-        text: `Lo sentimos, solo quedan ${sinStock.existencias} unidades de ${sinStock.nombre}`,
+        text: `Solo quedan ${sinStock.existencias} unidades de ${sinStock.nombre}`,
         confirmButtonColor: '#E91E63'
       });
     }
@@ -82,29 +98,27 @@ export default function Cart() {
 
     try {
       const res = await axios.post(`${apiUrl}/api/orders`, {
-        usuario: localStorage.getItem('userName') || "Cliente",
-        telefono: localStorage.getItem('userPhone') || "",
-        productos: cart.map(i => ({ 
-          productoId: i._id, 
-          nombre: i.nombre, 
-          cantidad: i.qty, 
-          precio: i.precio 
+        usuario: localStorage.getItem('userName') || 'Cliente',
+        telefono: localStorage.getItem('userPhone') || '',
+        productos: cart.map(i => ({
+          productoId: i._id,
+          nombre: i.nombre,
+          cantidad: i.qty,
+          precio: i.precio
         })),
         total: totalPrice,
         metodoPago: 'efectivo'
       });
-      
+
       if (res.status === 200 || res.status === 201) {
-        // Alerta de éxito profesional
         Swal.fire({
           icon: 'success',
           title: '¡Pedido registrado! 🍭',
           text: 'Gracias por comprar en Dulce Mundo. Tu pedido se ha guardado correctamente.',
           confirmButtonColor: '#E91E63'
         });
-        
         if (typeof clearCart === 'function') clearCart();
-        navigate('/catalogo'); 
+        navigate('/catalogo');
       }
     } catch (error) {
       Swal.fire('Error', 'No se pudo registrar el pedido. Intenta de nuevo.', 'error');
@@ -123,7 +137,7 @@ export default function Cart() {
   return (
     <div style={containerStyle}>
       <h1 style={titleStyle}>Tu Carrito ({totalItems})</h1>
-      
+
       <div style={cartListStyle}>
         {cart.map(item => (
           <div key={item._id} style={cardStyle}>
@@ -132,13 +146,13 @@ export default function Cart() {
               <p style={{ margin: '5px 0', color: '#757575' }}>${item.precio} c/u</p>
               <span style={stockLabelStyle}>Stock: {item.existencias}</span>
             </div>
-            
+
             <div style={controlsStyle}>
               <button style={qtyBtnStyle} onClick={() => updateQty(item._id, -1)}>-</button>
               <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{item.qty}</span>
-              <button 
-                style={qtyBtnStyle} 
-                onClick={() => updateQty(item._id, 1)} 
+              <button
+                style={qtyBtnStyle}
+                onClick={() => updateQty(item._id, 1)}
                 disabled={item.qty >= item.existencias}
               >+</button>
               <button onClick={() => removeFromCart(item._id)} style={deleteBtnStyle}>🗑️</button>
@@ -153,29 +167,32 @@ export default function Cart() {
 
       <div style={actionsStyle}>
         {preferenceId ? (
-          <Wallet initialization={{ preferenceId }} customization={{ texts:{ valueProp: 'smart_option'}}} />
+          // El Wallet de MP redirige al usuario — clearCart ocurre en back_url de éxito
+          <Wallet
+            initialization={{ preferenceId }}
+            customization={{ texts: { valueProp: 'smart_option' } }}
+          />
         ) : (
           <button onClick={handleMercadoPago} disabled={isProcessing} style={btnMPStyle}>
-            💳 Pagar con Mercado Pago
+            {isProcessing ? '⏳ Preparando pago...' : '💳 Pagar con Mercado Pago'}
           </button>
         )}
 
-        <button 
-          onClick={handleCashPayment} 
-          disabled={isProcessing} 
-          style={{ 
-            ...btnCashStyle, 
-            background: isProcessing ? '#BDBDBD' : '#9C27B0' 
+        <button
+          onClick={handleCashPayment}
+          disabled={isProcessing}
+          style={{
+            ...btnCashStyle,
+            background: isProcessing ? '#BDBDBD' : '#9C27B0'
           }}
         >
-          {isProcessing ? "⏳ Procesando..." : "💵 Pago en Efectivo"}
+          {isProcessing ? '⏳ Procesando...' : '💵 Pago en Efectivo'}
         </button>
       </div>
     </div>
   );
 }
 
-// --- ESTILOS ---
 const containerStyle = { padding: '2rem', maxWidth: '600px', margin: '0 auto', marginTop: '70px' };
 const titleStyle = { textAlign: 'center', color: '#E91E63', marginBottom: '2rem' };
 const cartListStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
