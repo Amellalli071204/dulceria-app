@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-const { MercadoPagoConfig, Preference } = require('mercadopago');
+const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
@@ -34,35 +35,54 @@ router.post('/create_preference', async (req, res) => {
     }
 });
 
-// 2. WEBHOOK: Actualización automática e inventario
+// 2. WEBHOOK: Recibir y procesar notificaciones
 router.post('/webhook', async (req, res) => {
+    // Seguridad: Validar el secreto enviado en la URL
+    if (req.query.secret !== process.env.WEBHOOK_SECRET) {
+        return res.status(403).send('No autorizado');
+    }
+
     const { data, type } = req.body;
 
     if (type !== 'payment') return res.sendStatus(200);
 
     try {
-        // Consultar el estado real en MP
-        const response = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
-            headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }
-        });
-        const paymentData = await response.json();
+        // Consulta real a la API de Mercado Pago
+        const payment = new Payment(client);
+        const paymentData = await payment.get({ id: data.id });
 
         if (paymentData.status === 'approved') {
             const orderId = paymentData.external_reference;
-            const order = await Order.findById(orderId);
 
-            // IDEMPOTENCIA: Solo procesar si el pedido existe y no ha sido pagado aún
-            if (order && order.estado !== 'pagado') {
-                order.estado = 'pagado';
-                await order.save();
+            // Transacción para asegurar integridad
+            const session = await mongoose.startSession();
+            session.startTransaction();
 
-                // DESCONTAR STOCK
-                for (const item of order.productos) {
-                    await Product.findByIdAndUpdate(item.productoId, { 
-                        $inc: { existencias: -Number(item.cantidad) } 
-                    });
+            try {
+                const order = await Order.findById(orderId).session(session);
+
+                // Idempotencia: Verificar si ya fue procesado
+                if (order && order.estado !== 'pagado') {
+                    order.estado = 'pagado';
+                    order.payment_id = paymentData.id;
+                    await order.save({ session });
+
+                    // Descontar inventario
+                    for (const item of order.productos) {
+                        await Product.findByIdAndUpdate(
+                            item.productoId,
+                            { $inc: { existencias: -Number(item.cantidad) } },
+                            { session }
+                        );
+                    }
+                    console.log(`✅ Pedido ${orderId} procesado correctamente`);
                 }
-                console.log(`✅ Pedido ${orderId} procesado: Stock descontado`);
+                await session.commitTransaction();
+            } catch (err) {
+                await session.abortTransaction();
+                throw err;
+            } finally {
+                session.endSession();
             }
         }
         res.sendStatus(200);
@@ -72,7 +92,7 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. GUARDAR PEDIDO (Efectivo o inicio de Digital)
+// 3. GUARDAR PEDIDO (Efectivo)
 router.post('/', async (req, res) => {
     try {
         const newOrder = new Order(req.body);
@@ -94,7 +114,7 @@ router.get('/', async (req, res) => {
     try {
         const orders = await Order.find().sort({ fecha: -1 });
         res.json(orders);
-    } catch (err) { res.status(500).json({ error: 'Error al obtener' }); }
+    } catch (err) { res.status(500).json({ error: 'Error' }); }
 });
 
 // 5. ACTUALIZAR ESTADO MANUAL
