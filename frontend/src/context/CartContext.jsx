@@ -11,10 +11,16 @@ export const CartProvider = ({ children }) => {
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
-  // Persistencia: Cada vez que 'cart' cambie, se actualiza en localStorage
+  // Persistencia: Cada vez que 'cart' cambie, se actualiza en localStorage de manera automática
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
+
+  // Vaciar carrito (Esencial para finalizar procesos de pago exitosos)
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem('cart');
+  };
 
   // Agregar producto al carrito
   const addToCart = (product) => {
@@ -25,7 +31,6 @@ export const CartProvider = ({ children }) => {
           item._id === product._id ? { ...item, qty: item.qty + 1 } : item
         );
       }
-      // Se inicializa con qty: 1
       return [...prev, { ...product, qty: 1 }];
     });
   };
@@ -42,12 +47,6 @@ export const CartProvider = ({ children }) => {
     setCart(prev => prev.filter(item => item._id !== id));
   };
 
-  // Vaciar carrito (esencial para finalizar procesos de pago)
-  const clearCart = () => {
-    setCart([]);
-    localStorage.removeItem('cart');
-  };
-
   // Cálculos derivados
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
   const totalPrice = cart.reduce((acc, item) => acc + (item.qty * item.precio), 0);
@@ -58,7 +57,7 @@ export const CartProvider = ({ children }) => {
       addToCart, 
       updateQty, 
       removeFromCart, 
-      clearCart, 
+      clearCart, // <-- Exportación correcta de la función para usarla en Cart.jsx
       totalItems, 
       totalPrice 
     }}>
