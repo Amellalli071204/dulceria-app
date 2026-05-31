@@ -6,8 +6,6 @@ export default function Footer() {
         <div style={namesGridStyle}>
           <span style={teamTitleStyle}>Desarrollado por:</span>
           <span>Amellalli</span>
-          <span>Juan Carlos</span>
-          <span>José</span>
         </div>
         <p style={copyrightStyle}>© 2026 UMB Atenco</p>
       </div>
