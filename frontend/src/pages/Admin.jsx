@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'; 
 import axios from 'axios';
-import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar, FaUserLock, FaUsers } from 'react-icons/fa'; 
+import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar, FaUserLock, FaQrcode } from 'react-icons/fa'; 
 import Swal from 'sweetalert2'; 
 import jsPDF from 'jspdf'; 
 import autoTable from 'jspdf-autotable';
 import VentasChart from '../components/VentasChart';
+import { QrReader } from 'react-qr-reader';
 
 const apiUrl = import.meta.env.VITE_API_URL; 
 
@@ -12,6 +13,8 @@ export default function Admin() {
     const [orders, setOrders] = useState([]); 
     const [users, setUsers] = useState([]);
     const [loadingId, setLoadingId] = useState(null); 
+    const [showScanner, setShowScanner] = useState(false);
+    
     const [newProduct, setNewProduct] = useState({
         nombre: '', descripcion: '', precio: '', imagen: '', existencias: ''
     });
@@ -160,6 +163,32 @@ export default function Admin() {
         } 
     };
 
+    // Lógica para el escáner QR
+    const handleScan = (result, error) => {
+        if (!!result) {
+            const scannedId = result?.text;
+            setShowScanner(false);
+            
+            Swal.fire({
+                title: 'Código QR Detectado',
+                text: `¿Deseas marcar el pedido con ID ${scannedId} como entregado?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#4CAF50',
+                cancelButtonColor: '#E91E63',
+                confirmButtonText: 'Sí, entregar',
+                cancelButtonText: 'Cancelar'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    handleUpdateStatus(scannedId, 'entregado');
+                }
+            });
+        }
+        if (!!error) {
+            // Ignoramos errores de búsqueda continua del escáner
+        }
+    };
+
     // --- LÓGICA DEL REPORTE FINANCIERO ---
     const totalPedidos = orders.length;
     const pedidosCompletados = orders.filter(o => o.estado === 'pagado' || o.estado === 'entregado');
@@ -202,7 +231,6 @@ export default function Admin() {
                     <FaFileInvoiceDollar /> Reporte Financiero 📊
                 </h2>
                 
-                {/* Tarjetas de Métricas Principales */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                     <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
                         <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Total Ingresos</h3>
@@ -229,7 +257,6 @@ export default function Admin() {
                     </div>
                 </div>
 
-                {/* Tabla de Resumen por Método de Pago */}
                 <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #eee' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
                         <thead>
@@ -253,6 +280,29 @@ export default function Admin() {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* --- SECCIÓN ESCÁNER QR --- */}
+            <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+                <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                    <FaQrcode /> Escáner QR de Entregas
+                </h2>
+                <button 
+                    onClick={() => setShowScanner(!showScanner)} 
+                    style={{ background: showScanner ? '#E91E63' : '#4A148C', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', marginBottom: '15px', fontWeight: 'bold' }}
+                >
+                    {showScanner ? 'Cerrar Escáner' : 'Abrir Escáner de Pedidos'}
+                </button>
+
+                {showScanner && (
+                    <div style={{ maxWidth: '350px', margin: '0 auto', border: '3px solid #9C27B0', borderRadius: '10px', overflow: 'hidden' }}>
+                        <QrReader 
+                            onResult={handleScan}
+                            constraints={{ facingMode: 'environment' }}
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* --- SECCIÓN PRODUCTOS --- */} 
