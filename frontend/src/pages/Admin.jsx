@@ -5,7 +5,6 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf'; 
 import autoTable from 'jspdf-autotable';
 import VentasChart from '../components/VentasChart';
-import QrScanner from '@yudiel/react-qr-scanner';
 
 const apiUrl = import.meta.env.VITE_API_URL; 
 
@@ -13,8 +12,7 @@ export default function Admin() {
     const [orders, setOrders] = useState([]); 
     const [users, setUsers] = useState([]);
     const [loadingId, setLoadingId] = useState(null); 
-    const [showScanner, setShowScanner] = useState(false);
-    
+
     const [newProduct, setNewProduct] = useState({
         nombre: '', descripcion: '', precio: '', imagen: '', existencias: ''
     });
@@ -57,7 +55,6 @@ export default function Admin() {
             confirmButtonText: 'Sí, cambiar', 
             cancelButtonText: 'Cancelar' 
         });
-        
         if (confirm.isConfirmed) { 
             try { 
                 await axios.put(`${apiUrl}/api/users/${id}/role`, { isAdmin: !currentStatus }, { 
@@ -105,11 +102,9 @@ export default function Admin() {
             doc.text(`WhatsApp: ${order.telefono}`, 20, 87);
             doc.text(`Fecha: ${new Date(order.fecha).toLocaleString()}`, 20, 94); 
             doc.text(`Método: ${order.metodoPago.toUpperCase()}`, 20, 101);
-            
             const body = order.productos.map(p => [ 
                 p.nombre, p.cantidad, `$${p.precio}`, `$${(p.cantidad * p.precio).toFixed(2)}` 
             ]);
-            
             autoTable(doc, { 
                 startY: 110, 
                 head: [['Producto', 'Cant.', 'Precio U.', 'Subtotal']], 
@@ -117,7 +112,6 @@ export default function Admin() {
                 headStyles: { fillStyle: [233, 30, 99] }, 
                 theme: 'striped' 
             });
-            
             const finalY = doc.lastAutoTable.finalY; 
             doc.setFontSize(14); 
             doc.setFont("helvetica", "bold"); 
@@ -126,7 +120,6 @@ export default function Admin() {
             doc.setFont("helvetica", "italic");
             doc.text("¡Gracias por endulzar tu día!", 105, finalY + 30, { align: 'center' }); 
             doc.save(`Ticket_${order.usuario}.pdf`);
-            
             const mensaje = `Hola ${order.usuario}, ¡gracias por tu compra en Dulce Mundo! 🍭 Aquí tienes tu ticket por $${order.total}.`; 
             window.open(`https://wa.me/52${order.telefono.replace(/\s+/g, '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
         } catch (error) { 
@@ -163,50 +156,20 @@ export default function Admin() {
         } 
     };
 
-    // Lógica para el escáner QR — usa QrScanner (paquete @yudiel/react-qr-scanner)
-    const handleScan = (result) => {
-        if (!result) return;
-        const scannedId = typeof result === 'string' ? result : result?.text;
-        if (!scannedId) return;
-
-        setShowScanner(false);
-        
-        Swal.fire({
-            title: 'Código QR Detectado',
-            text: `¿Deseas marcar el pedido con ID ${scannedId} como entregado?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#4CAF50',
-            cancelButtonColor: '#E91E63',
-            confirmButtonText: 'Sí, entregar',
-            cancelButtonText: 'Cancelar'
-        }).then((res) => {
-            if (res.isConfirmed) {
-                handleUpdateStatus(scannedId, 'entregado');
-            }
-        });
-    };
-
     // --- LÓGICA DEL REPORTE FINANCIERO ---
     const totalPedidos = orders.length;
     const pedidosCompletados = orders.filter(o => o.estado === 'pagado' || o.estado === 'entregado');
     const ingresosTotales = pedidosCompletados.reduce((sum, o) => sum + (o.total || 0), 0);
     const ticketPromedio = pedidosCompletados.length > 0 ? (ingresosTotales / pedidosCompletados.length).toFixed(2) : "0.00";
-    
     const pedidosPendientes = orders.filter(o => o.estado === 'pendiente').length;
     const pedidosPagados = orders.filter(o => o.estado === 'pagado').length;
     const pedidosEntregados = orders.filter(o => o.estado === 'entregado').length;
 
-    const resumenMetodo = {
-        efectivo: { cantidad: 0, total: 0 },
-        mercadopago: { cantidad: 0, total: 0 }
-    };
-
+    const resumenMetodo = { efectivo: { cantidad: 0, total: 0 }, mercadopago: { cantidad: 0, total: 0 } };
     orders.forEach(o => {
         const metodo = o.metodoPago === 'mercadopago' ? 'mercadopago' : 'efectivo';
-        const isPagado = o.estado === 'pagado' || o.estado === 'entregado';
         resumenMetodo[metodo].cantidad += 1;
-        if (isPagado) {
+        if (o.estado === 'pagado' || o.estado === 'entregado') {
             resumenMetodo[metodo].total += (o.total || 0);
         }
     });
@@ -222,35 +185,33 @@ export default function Admin() {
                 <VentasChart />
             </div>
 
-            {/* --- SECCIÓN REPORTE FINANCIERO --- */}
+            {/* --- REPORTE FINANCIERO --- */}
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
                 <h2 style={{ color: '#4A148C', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                     <FaFileInvoiceDollar /> Reporte Financiero 📊
                 </h2>
-                
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-                    <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
-                        <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Total Ingresos</h3>
-                        <p style={{ color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' }}>${ingresosTotales.toFixed(2)}</p>
+                    <div style={cardStyle}>
+                        <h3 style={cardTitleStyle}>Total Ingresos</h3>
+                        <p style={cardValueStyle}>${ingresosTotales.toFixed(2)}</p>
                     </div>
-                    <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
-                        <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Total Pedidos</h3>
-                        <p style={{ color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' }}>{totalPedidos}</p>
+                    <div style={cardStyle}>
+                        <h3 style={cardTitleStyle}>Total Pedidos</h3>
+                        <p style={cardValueStyle}>{totalPedidos}</p>
                     </div>
-                    <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
-                        <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Ticket Promedio</h3>
-                        <p style={{ color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' }}>${ticketPromedio}</p>
+                    <div style={cardStyle}>
+                        <h3 style={cardTitleStyle}>Ticket Promedio</h3>
+                        <p style={cardValueStyle}>${ticketPromedio}</p>
                     </div>
-                    <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
-                        <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Estados</h3>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                    <div style={cardStyle}>
+                        <h3 style={cardTitleStyle}>Estados</h3>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', fontWeight: 'bold', fontSize: '0.95rem' }}>
                             <span style={{ color: '#FFB300' }}>⏳ {pedidosPendientes}</span> |
                             <span style={{ color: '#9C27B0' }}>💳 {pedidosPagados}</span> |
                             <span style={{ color: '#4CAF50' }}>📦 {pedidosEntregados}</span>
                         </div>
                     </div>
                 </div>
-
                 <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #eee' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
                         <thead>
@@ -276,31 +237,15 @@ export default function Admin() {
                 </div>
             </div>
 
-            {/* --- SECCIÓN ESCÁNER QR --- */}
+            {/* --- ESCÁNER QR (temporalmente deshabilitado) --- */}
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', textAlign: 'center' }}>
                 <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                     <FaQrcode /> Escáner QR de Entregas
                 </h2>
-                <button 
-                    onClick={() => setShowScanner(!showScanner)} 
-                    style={{ background: showScanner ? '#E91E63' : '#4A148C', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', marginBottom: '15px', fontWeight: 'bold' }}
-                >
-                    {showScanner ? 'Cerrar Escáner' : 'Abrir Escáner de Pedidos'}
-                </button>
-
-                {showScanner && (
-                    <div style={{ maxWidth: '350px', margin: '0 auto', border: '3px solid #9C27B0', borderRadius: '10px', overflow: 'hidden' }}>
-                        <QrScanner
-                            onDecode={handleScan}
-                            onError={(error) => console.warn('QR error:', error?.message)}
-                            constraints={{ facingMode: 'environment' }}
-                            containerStyle={{ width: '100%' }}
-                        />
-                    </div>
-                )}
+                <p style={{ color: '#aaa', fontSize: '0.9rem' }}>Funcionalidad en mantenimiento 🔧</p>
             </div>
 
-            {/* --- SECCIÓN PRODUCTOS --- */} 
+            {/* --- AGREGAR PRODUCTO --- */} 
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}> 
                 <h2 style={{ color: '#9C27B0', display: 'flex', alignItems: 'center', gap: '10px' }}> 
                     <FaPlusCircle /> Agregar Nuevo Dulce 
@@ -315,7 +260,7 @@ export default function Admin() {
                 </form>
             </div>
 
-            {/* --- SECCIÓN USUARIOS --- */} 
+            {/* --- GESTIONAR ADMINS --- */} 
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}> 
                 <h2 style={{ color: '#4A148C', display: 'flex', alignItems: 'center', gap: '10px' }}> 
                     <FaUserLock /> Gestionar Admins 
@@ -335,7 +280,7 @@ export default function Admin() {
                 </div>
             </div>
 
-            {/* --- SECCIÓN PEDIDOS --- */} 
+            {/* --- PEDIDOS RECIENTES --- */} 
             <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}> 
                 <FaBoxOpen /> Pedidos Recientes 
             </h2> 
@@ -388,3 +333,6 @@ export default function Admin() {
 
 const inputStyle = { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', outline: 'none' };
 const saveButtonStyle = { gridColumn: 'span 2', background: '#9C27B0', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '10px' };
+const cardStyle = { background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' };
+const cardTitleStyle = { color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' };
+const cardValueStyle = { color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' };
