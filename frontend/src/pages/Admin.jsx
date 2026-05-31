@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf'; 
 import autoTable from 'jspdf-autotable';
 import VentasChart from '../components/VentasChart';
-import { QrReader } from 'react-qr-reader';
+import { QrScanner } from '@yudiel/react-qr-scanner';
 
 const apiUrl = import.meta.env.VITE_API_URL; 
 
@@ -163,30 +163,28 @@ export default function Admin() {
         } 
     };
 
-    // Lógica para el escáner QR
-    const handleScan = (result, error) => {
-        if (!!result) {
-            const scannedId = result?.text;
-            setShowScanner(false);
-            
-            Swal.fire({
-                title: 'Código QR Detectado',
-                text: `¿Deseas marcar el pedido con ID ${scannedId} como entregado?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#4CAF50',
-                cancelButtonColor: '#E91E63',
-                confirmButtonText: 'Sí, entregar',
-                cancelButtonText: 'Cancelar'
-            }).then((res) => {
-                if (res.isConfirmed) {
-                    handleUpdateStatus(scannedId, 'entregado');
-                }
-            });
-        }
-        if (!!error) {
-            // Ignoramos errores de búsqueda continua del escáner
-        }
+    // Lógica para el escáner QR — usa QrScanner (paquete @yudiel/react-qr-scanner)
+    const handleScan = (result) => {
+        if (!result) return;
+        const scannedId = typeof result === 'string' ? result : result?.text;
+        if (!scannedId) return;
+
+        setShowScanner(false);
+        
+        Swal.fire({
+            title: 'Código QR Detectado',
+            text: `¿Deseas marcar el pedido con ID ${scannedId} como entregado?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4CAF50',
+            cancelButtonColor: '#E91E63',
+            confirmButtonText: 'Sí, entregar',
+            cancelButtonText: 'Cancelar'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                handleUpdateStatus(scannedId, 'entregado');
+            }
+        });
     };
 
     // --- LÓGICA DEL REPORTE FINANCIERO ---
@@ -207,7 +205,6 @@ export default function Admin() {
     orders.forEach(o => {
         const metodo = o.metodoPago === 'mercadopago' ? 'mercadopago' : 'efectivo';
         const isPagado = o.estado === 'pagado' || o.estado === 'entregado';
-        
         resumenMetodo[metodo].cantidad += 1;
         if (isPagado) {
             resumenMetodo[metodo].total += (o.total || 0);
@@ -236,23 +233,20 @@ export default function Admin() {
                         <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Total Ingresos</h3>
                         <p style={{ color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' }}>${ingresosTotales.toFixed(2)}</p>
                     </div>
-                    
                     <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
                         <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Total Pedidos</h3>
                         <p style={{ color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' }}>{totalPedidos}</p>
                     </div>
-                    
                     <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
                         <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Ticket Promedio</h3>
                         <p style={{ color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' }}>${ticketPromedio}</p>
                     </div>
-                    
                     <div style={{ background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' }}>
                         <h3 style={{ color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Estados</h3>
-                        <div style={{ fontSize: '0.95rem', color: '#4A148C', fontWeight: 'bold', display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                            <span title="Pendientes" style={{ color: '#FFB300' }}>⏳ {pedidosPendientes}</span> |
-                            <span title="Pagados" style={{ color: '#9C27B0' }}>💳 {pedidosPagados}</span> |
-                            <span title="Entregados" style={{ color: '#4CAF50' }}>📦 {pedidosEntregados}</span>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                            <span style={{ color: '#FFB300' }}>⏳ {pedidosPendientes}</span> |
+                            <span style={{ color: '#9C27B0' }}>💳 {pedidosPagados}</span> |
+                            <span style={{ color: '#4CAF50' }}>📦 {pedidosEntregados}</span>
                         </div>
                     </div>
                 </div>
@@ -296,10 +290,11 @@ export default function Admin() {
 
                 {showScanner && (
                     <div style={{ maxWidth: '350px', margin: '0 auto', border: '3px solid #9C27B0', borderRadius: '10px', overflow: 'hidden' }}>
-                        <QrReader 
-                            onResult={handleScan}
+                        <QrScanner
+                            onDecode={handleScan}
+                            onError={(error) => console.warn('QR error:', error?.message)}
                             constraints={{ facingMode: 'environment' }}
-                            style={{ width: '100%' }}
+                            containerStyle={{ width: '100%' }}
                         />
                     </div>
                 )}
