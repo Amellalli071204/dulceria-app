@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf'; 
 import autoTable from 'jspdf-autotable';
 import VentasChart from '../components/VentasChart';
-import { QrScanner } from '@yudiel/react-qr-scanner';
+import QrScanner from '@yudiel/react-qr-scanner';
 
 const apiUrl = import.meta.env.VITE_API_URL; 
 
