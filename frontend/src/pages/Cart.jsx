@@ -1,162 +1,263 @@
-import { useState } from 'react'; 
-import { useCart } from '../context/CartContext'; 
-import { initMercadoPago, Wallet } from '@mercadopago/sdk-react'; 
-import axios from 'axios'; 
-import { useNavigate } from 'react-router-dom'; 
-import Swal from 'sweetalert2'; 
+import { useState } from 'react';
+import { useCart } from '../context/CartContext';
+import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import { QRCodeCanvas } from 'qrcode.react';
+import { createRoot } from 'react-dom/client';
 
-const apiUrl = import.meta.env.VITE_API_URL; 
+const apiUrl = import.meta.env.VITE_API_URL;
 initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
 
-export default function Cart() { 
-    const { cart, updateQty, removeFromCart, totalPrice, totalItems, clearCart } = useCart(); 
-    const [preferenceId, setPreferenceId] = useState(null); 
-    const [isProcessing, setIsProcessing] = useState(false); 
-    const navigate = useNavigate();
+// Función para mostrar el QR en un SweetAlert2
+const mostrarQR = (orderId, usuario) => {
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'center';
+  container.style.gap = '12px';
+  container.style.padding = '10px';
 
-    const handleMercadoPago = async () => { 
-        if (isProcessing) return;
-        
-        const token = localStorage.getItem('token'); 
-        if (!token) { 
-            return Swal.fire({ icon: 'warning', title: 'Inicia Sesión', text: 'Debes estar registrado para realizar un pedido.', confirmButtonColor: '#9C27B0' }); 
-        }
+  const root = createRoot(container);
+  root.render(
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+      <p style={{ margin: 0, color: '#555', fontSize: '0.9rem' }}>
+        Muestra este código al repartidor para confirmar tu entrega
+      </p>
+      <QRCodeCanvas
+        value={orderId}
+        size={200}
+        bgColor="#ffffff"
+        fgColor="#4A148C"
+        level="H"
+        includeMargin={true}
+      />
+      <p style={{ margin: 0, color: '#9C27B0', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+        ID: {orderId}
+      </p>
+    </div>
+  );
 
-        const sinStock = cart.find(item => item.qty > (item.existencias || 0)); 
-        if (sinStock) { 
-            return Swal.fire({ icon: 'error', title: 'Stock insuficiente', text: `Lo sentimos, solo quedan ${sinStock.existencias} unidades de ${sinStock.nombre}`, confirmButtonColor: '#E91E63' }); 
-        }
+  Swal.fire({
+    title: `¡Pedido confirmado, ${usuario}! 🍭`,
+    html: container,
+    confirmButtonText: 'Descargar QR',
+    showCancelButton: true,
+    cancelButtonText: 'Cerrar',
+    confirmButtonColor: '#E91E63',
+    cancelButtonColor: '#9C27B0',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Descargar el QR como imagen
+      const canvas = container.querySelector('canvas');
+      if (canvas) {
+        const link = document.createElement('a');
+        link.download = `QR_Pedido_${orderId}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+    }
+    root.unmount();
+  });
+};
 
-        setIsProcessing(true);
-        try { 
-            // 1. PRIMERO CREAMOS EL PEDIDO EN LA BASE DE DATOS COMO "PENDIENTE"
-            const orderRes = await axios.post(`${apiUrl}/api/orders`, { 
-                usuario: localStorage.getItem('userName') || "Cliente", 
-                telefono: localStorage.getItem('userPhone') || "", 
-                productos: cart.map(i => ({ 
-                    productoId: i._id, 
-                    nombre: i.nombre, 
-                    cantidad: i.qty, 
-                    precio: i.precio 
-                })), 
-                total: totalPrice, 
-                metodoPago: 'mercadopago' // Marcamos que será digital
-            }); 
-            
-            const orderId = orderRes.data._id; // Obtenemos el ID de MongoDB
+export default function Cart() {
+  const { cart, updateQty, removeFromCart, totalPrice, totalItems, clearCart } = useCart();
+  const [preferenceId, setPreferenceId] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const navigate = useNavigate();
 
-            // 2. AHORA SÍ, CREAMOS LA PREFERENCIA ENVIANDO EL ORDERID
-            const prefRes = await axios.post(`${apiUrl}/api/orders/create_preference`, { 
-                items: cart.map(item => ({ 
-                    nombre: item.nombre, 
-                    cantidad: item.qty, 
-                    precio: item.precio 
-                })),
-                orderId: orderId // ¡Esto es lo que conectará el Webhook!
-            }); 
-            
-            setPreferenceId(prefRes.data.id); 
-        } catch (error) { 
-            console.error(error); 
-            Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo conectar con Mercado Pago', confirmButtonColor: '#E91E63' }); 
-        } finally {
-            setIsProcessing(false);
-        }
-    };
+  const handleMercadoPago = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Inicia Sesión',
+        text: 'Debes estar registrado para realizar un pedido.',
+        confirmButtonColor: '#9C27B0'
+      });
+    }
 
-    const handleCashPayment = async () => { 
-        if (isProcessing) return;
-        const token = localStorage.getItem('token'); 
-        if (!token) { 
-            return Swal.fire({ icon: 'warning', title: 'Inicia Sesión', text: 'Debes estar registrado para realizar un pedido.', confirmButtonColor: '#9C27B0' }); 
-        }
+    if (isProcessing) return;
+    setIsProcessing(true);
 
-        const sinStock = cart.find(item => item.qty > (item.existencias || 0)); 
-        if (sinStock) { 
-            return Swal.fire({ icon: 'error', title: 'Stock insuficiente', text: `Lo sentimos, solo quedan ${sinStock.existencias} unidades de ${sinStock.nombre}`, confirmButtonColor: '#E91E63' }); 
-        }
+    try {
+      // Paso 1: Crear el pedido en la DB con estado 'pendiente'
+      const orderRes = await axios.post(`${apiUrl}/api/orders`, {
+        usuario: localStorage.getItem('userName') || 'Cliente',
+        telefono: localStorage.getItem('userPhone') || '',
+        productos: cart.map(i => ({
+          productoId: i._id,
+          nombre: i.nombre,
+          cantidad: i.qty,
+          precio: i.precio
+        })),
+        total: totalPrice,
+        metodoPago: 'mercadopago'
+      });
 
-        setIsProcessing(true);
-        try { 
-            const res = await axios.post(`${apiUrl}/api/orders`, { 
-                usuario: localStorage.getItem('userName') || "Cliente", 
-                telefono: localStorage.getItem('userPhone') || "", 
-                productos: cart.map(i => ({ productoId: i._id, nombre: i.nombre, cantidad: i.qty, precio: i.precio })), 
-                total: totalPrice, 
-                metodoPago: 'efectivo' 
-            }); 
-            
-            if (res.status === 200 || res.status === 201) { 
-                Swal.fire({ icon: 'success', title: '¡Pedido registrado! 🍭', text: 'Gracias por comprar en Dulce Mundo.', confirmButtonColor: '#E91E63' }); 
-                if (typeof clearCart === 'function') clearCart(); 
-                navigate('/catalogo'); 
-            } 
-        } catch (error) { 
-            Swal.fire('Error', 'No se pudo registrar el pedido.', 'error'); 
-        } finally { 
-            setIsProcessing(false); 
-        } 
-    };
+      const orderId = orderRes.data._id;
 
-    if (cart.length === 0) return ( 
-        <div style={{ textAlign: 'center', marginTop: '100px' }}> 
-            <h2 style={{ color: '#E91E63' }}>Tu carrito está vacío 🍬</h2> 
-            <button onClick={() => navigate('/catalogo')} style={btnCatalogStyle}>Ir a comprar</button> 
-        </div> 
-    );
+      // Paso 2: Crear preferencia de MP con el orderId
+      const prefRes = await axios.post(`${apiUrl}/api/orders/create_preference`, {
+        items: cart.map(item => ({
+          nombre: item.nombre,
+          cantidad: item.qty,
+          precio: item.precio
+        })),
+        orderId
+      });
 
-    return ( 
-        <div style={containerStyle}> 
-            <h1 style={titleStyle}>Tu Carrito ({totalItems})</h1> 
-            <div style={cartListStyle}> 
-                {cart.map(item => ( 
-                    <div key={item._id} style={cardStyle}> 
-                        <div style={{ flex: 1 }}> 
-                            <h3 style={{ margin: '0', color: '#4A148C' }}>{item.nombre}</h3> 
-                            <p style={{ margin: '5px 0', color: '#757575' }}>${item.precio} c/u</p> 
-                            <span style={stockLabelStyle}>Stock: {item.existencias}</span> 
-                        </div> 
-                        <div style={controlsStyle}> 
-                            <button style={qtyBtnStyle} onClick={() => updateQty(item._id, -1)}>-</button> 
-                            <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{item.qty}</span> 
-                            <button style={qtyBtnStyle} onClick={() => updateQty(item._id, 1)} disabled={item.qty >= item.existencias}>+</button> 
-                            <button onClick={() => removeFromCart(item._id)} style={deleteBtnStyle}>🗑️</button> 
-                        </div> 
-                    </div> 
-                ))} 
+      setPreferenceId(prefRes.data.id);
+
+    } catch (error) {
+      console.error(error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No se pudo conectar con Mercado Pago. Intenta de nuevo.',
+        confirmButtonColor: '#E91E63'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCashPayment = async () => {
+    if (isProcessing) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Inicia Sesión',
+        text: 'Debes estar registrado para realizar un pedido.',
+        confirmButtonColor: '#9C27B0'
+      });
+    }
+
+    const sinStock = cart.find(item => item.qty > (item.existencias || 0));
+    if (sinStock) {
+      return Swal.fire({
+        icon: 'error',
+        title: 'Stock insuficiente',
+        text: `Solo quedan ${sinStock.existencias} unidades de ${sinStock.nombre}`,
+        confirmButtonColor: '#E91E63'
+      });
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const usuario = localStorage.getItem('userName') || 'Cliente';
+
+      const res = await axios.post(`${apiUrl}/api/orders`, {
+        usuario,
+        telefono: localStorage.getItem('userPhone') || '',
+        productos: cart.map(i => ({
+          productoId: i._id,
+          nombre: i.nombre,
+          cantidad: i.qty,
+          precio: i.precio
+        })),
+        total: totalPrice,
+        metodoPago: 'efectivo'
+      });
+
+      if (res.status === 200 || res.status === 201) {
+        const orderId = res.data._id;
+
+        if (typeof clearCart === 'function') clearCart();
+
+        // Mostrar QR con el ID del pedido
+        mostrarQR(orderId, usuario);
+
+        // Redirigir al catálogo después de cerrar el QR
+        setTimeout(() => navigate('/catalogo'), 100);
+      }
+    } catch (error) {
+      Swal.fire('Error', 'No se pudo registrar el pedido. Intenta de nuevo.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (cart.length === 0) return (
+    <div style={{ textAlign: 'center', marginTop: '100px' }}>
+      <h2 style={{ color: '#E91E63' }}>Tu carrito está vacío 🍬</h2>
+      <button onClick={() => navigate('/catalogo')} style={btnCatalogStyle}>Ir a comprar</button>
+    </div>
+  );
+
+  return (
+    <div style={containerStyle}>
+      <h1 style={titleStyle}>Tu Carrito ({totalItems})</h1>
+
+      <div style={cartListStyle}>
+        {cart.map(item => (
+          <div key={item._id} style={cardStyle}>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: '0', color: '#4A148C' }}>{item.nombre}</h3>
+              <p style={{ margin: '5px 0', color: '#757575' }}>${item.precio} c/u</p>
+              <span style={stockLabelStyle}>Stock: {item.existencias}</span>
             </div>
 
-            <div style={summaryStyle}> 
-                <h2 style={{ margin: '0', color: '#E91E63' }}>Total: ${totalPrice}</h2> 
+            <div style={controlsStyle}>
+              <button style={qtyBtnStyle} onClick={() => updateQty(item._id, -1)}>-</button>
+              <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{item.qty}</span>
+              <button
+                style={qtyBtnStyle}
+                onClick={() => updateQty(item._id, 1)}
+                disabled={item.qty >= item.existencias}
+              >+</button>
+              <button onClick={() => removeFromCart(item._id)} style={deleteBtnStyle}>🗑️</button>
             </div>
+          </div>
+        ))}
+      </div>
 
-            <div style={actionsStyle}> 
-                {preferenceId ? ( 
-                    <Wallet initialization={{ preferenceId }} customization={{ texts:{ valueProp: 'smart_option'}}} /> 
-                ) : ( 
-                    <button onClick={handleMercadoPago} disabled={isProcessing} style={btnMPStyle}> 
-                        {isProcessing ? "⏳ Cargando..." : "💳 Pagar con Mercado Pago"}
-                    </button> 
-                )}
-                <button onClick={handleCashPayment} disabled={isProcessing} style={{ ...btnCashStyle, background: isProcessing ? '#BDBDBD' : '#9C27B0' }}> 
-                    {isProcessing ? "⏳ Procesando..." : "💵 Pago en Efectivo"} 
-                </button> 
-            </div> 
-        </div> 
-    ); 
+      <div style={summaryStyle}>
+        <h2 style={{ margin: '0', color: '#E91E63' }}>Total: ${totalPrice}</h2>
+      </div>
+
+      <div style={actionsStyle}>
+        {preferenceId ? (
+          <Wallet
+            initialization={{ preferenceId }}
+            customization={{ texts: { valueProp: 'smart_option' } }}
+          />
+        ) : (
+          <button onClick={handleMercadoPago} disabled={isProcessing} style={btnMPStyle}>
+            {isProcessing ? '⏳ Preparando pago...' : '💳 Pagar con Mercado Pago'}
+          </button>
+        )}
+
+        <button
+          onClick={handleCashPayment}
+          disabled={isProcessing}
+          style={{
+            ...btnCashStyle,
+            background: isProcessing ? '#BDBDBD' : '#9C27B0'
+          }}
+        >
+          {isProcessing ? '⏳ Procesando...' : '💵 Pago en Efectivo'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
-// --- ESTILOS --- 
-const containerStyle = { padding: '2rem', maxWidth: '600px', margin: '0 auto', marginTop: '70px' }; 
-const titleStyle = { textAlign: 'center', color: '#E91E63', marginBottom: '2rem' }; 
-const cartListStyle = { display: 'flex', flexDirection: 'column', gap: '15px' }; 
-const cardStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', background: '#FFF0F5', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }; 
-const stockLabelStyle = { fontSize: '0.8rem', color: '#9C27B0', fontWeight: 'bold' }; 
-const controlsStyle = { display: 'flex', alignItems: 'center', gap: '12px' }; 
-const qtyBtnStyle = { width: '30px', height: '30px', borderRadius: '50%', border: 'none', background: '#E91E63', color: 'white', cursor: 'pointer', fontWeight: 'bold' }; 
-const deleteBtnStyle = { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', marginLeft: '10px' }; 
-const summaryStyle = { textAlign: 'right', marginTop: '20px', padding: '10px' }; 
-const actionsStyle = { display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }; 
-const btnCatalogStyle = { padding: '10px 20px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', marginTop: '15px' }; 
-const btnMPStyle = { padding: '15px', background: '#009ee3', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer', fontWeight: 'bold' }; 
+const containerStyle = { padding: '2rem', maxWidth: '600px', margin: '0 auto', marginTop: '70px' };
+const titleStyle = { textAlign: 'center', color: '#E91E63', marginBottom: '2rem' };
+const cartListStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
+const cardStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', background: '#FFF0F5', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' };
+const stockLabelStyle = { fontSize: '0.8rem', color: '#9C27B0', fontWeight: 'bold' };
+const controlsStyle = { display: 'flex', alignItems: 'center', gap: '12px' };
+const qtyBtnStyle = { width: '30px', height: '30px', borderRadius: '50%', border: 'none', background: '#E91E63', color: 'white', cursor: 'pointer', fontWeight: 'bold' };
+const deleteBtnStyle = { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', marginLeft: '10px' };
+const summaryStyle = { textAlign: 'right', marginTop: '20px', padding: '10px' };
+const actionsStyle = { display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' };
+const btnCatalogStyle = { padding: '10px 20px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', marginTop: '15px' };
+const btnMPStyle = { padding: '15px', background: '#009ee3', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer', fontWeight: 'bold' };
 const btnCashStyle = { padding: '15px', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s' };
