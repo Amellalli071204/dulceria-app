@@ -5,13 +5,15 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf'; 
 import autoTable from 'jspdf-autotable';
 import VentasChart from '../components/VentasChart';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 const apiUrl = import.meta.env.VITE_API_URL; 
 
 export default function Admin() { 
     const [orders, setOrders] = useState([]); 
     const [users, setUsers] = useState([]);
-    const [loadingId, setLoadingId] = useState(null); 
+    const [loadingId, setLoadingId] = useState(null);
+    const [showScanner, setShowScanner] = useState(false);
 
     const [newProduct, setNewProduct] = useState({
         nombre: '', descripcion: '', precio: '', imagen: '', existencias: ''
@@ -156,7 +158,26 @@ export default function Admin() {
         } 
     };
 
-    // --- LÓGICA DEL REPORTE FINANCIERO ---
+    const handleScan = (scannedId) => {
+        if (!scannedId) return;
+        setShowScanner(false);
+        Swal.fire({
+            title: 'Código QR Detectado',
+            text: `¿Marcar el pedido ${scannedId} como entregado?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4CAF50',
+            cancelButtonColor: '#E91E63',
+            confirmButtonText: 'Sí, entregar',
+            cancelButtonText: 'Cancelar'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                handleUpdateStatus(scannedId, 'entregado');
+            }
+        });
+    };
+
+    // --- REPORTE FINANCIERO ---
     const totalPedidos = orders.length;
     const pedidosCompletados = orders.filter(o => o.estado === 'pagado' || o.estado === 'entregado');
     const ingresosTotales = pedidosCompletados.reduce((sum, o) => sum + (o.total || 0), 0);
@@ -237,12 +258,30 @@ export default function Admin() {
                 </div>
             </div>
 
-            {/* --- ESCÁNER QR (temporalmente deshabilitado) --- */}
+            {/* --- ESCÁNER QR --- */}
             <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', textAlign: 'center' }}>
                 <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                     <FaQrcode /> Escáner QR de Entregas
                 </h2>
-                <p style={{ color: '#aaa', fontSize: '0.9rem' }}>Funcionalidad en mantenimiento 🔧</p>
+                <button 
+                    onClick={() => setShowScanner(!showScanner)} 
+                    style={{ background: showScanner ? '#E91E63' : '#4A148C', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', marginBottom: '15px', fontWeight: 'bold' }}
+                >
+                    {showScanner ? 'Cerrar Escáner' : 'Abrir Escáner de Pedidos'}
+                </button>
+                {showScanner && (
+                    <div style={{ maxWidth: '350px', margin: '0 auto', border: '3px solid #9C27B0', borderRadius: '10px', overflow: 'hidden' }}>
+                        <Scanner
+                            onScan={(results) => {
+                                if (results && results.length > 0) {
+                                    handleScan(results[0].rawValue);
+                                }
+                            }}
+                            onError={(error) => console.warn('QR error:', error)}
+                            constraints={{ facingMode: 'environment' }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* --- AGREGAR PRODUCTO --- */} 
