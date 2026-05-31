@@ -59,10 +59,11 @@ router.post('/create_preference', async (req, res) => {
                 quantity: Number(i.cantidad) 
             })),
             external_reference: orderId, // Clave para el webhook
-            back_urls: { 
-                success: "https://dulce-mundo.com/success", 
-                failure: "https://dulce-mundo.com/failure" 
-            }
+           back_urls: {
+    success: "https://humorous-nourishment-production.up.railway.app/catalogo?pago=exitoso",
+    failure: "https://humorous-nourishment-production.up.railway.app/carrito",
+    pending: "https://humorous-nourishment-production.up.railway.app/catalogo"
+},
         };
         const response = await mercadopago.preferences.create(preference);
         res.json({ id: response.body.id });
