@@ -8,6 +8,7 @@ import Cart from './pages/Cart';
 import Admin from './pages/Admin';
 import MisPedidos from './pages/MisPedidos';
 import Footer from './components/Footer';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/carrito" element={<Cart />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/mis-pedidos" element={<MisPedidos />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </div>
         <Footer /> 
