@@ -146,6 +146,21 @@ router.post('/webhook', async (req, res) => {
     res.sendStatus(200);
 });
 
+
+// 8. Pedidos de un cliente (GET /api/orders/mis-pedidos?usuario=Nombre)
+// ⚠️ DEBE ir antes de /:id
+router.get('/mis-pedidos', async (req, res) => {
+    try {
+        const { usuario } = req.query;
+        if (!usuario) return res.status(400).json({ error: 'Falta el usuario' });
+        const pedidos = await Order.find({ usuario }).sort({ fecha: -1 });
+        res.json(pedidos);
+    } catch (error) {
+        console.error("Error mis-pedidos:", error);
+        res.status(500).json({ error: 'Error al obtener pedidos' });
+    }
+});
+
 // 7. Actualizar estado del pedido (PATCH /api/orders/:id/status)
 router.patch('/:id/status', async (req, res) => {
     try {
