@@ -13,6 +13,16 @@ router.post('/', async (req, res) => {
     try {
         const newOrder = new Order(req.body);
         const savedOrder = await newOrder.save();
+
+        // Descontar stock si es efectivo
+        if (req.body.metodoPago === 'efectivo' && req.body.productos) {
+            for (const item of req.body.productos) {
+                if (item.productoId) {
+                    await Product.findByIdAndUpdate(item.productoId, { $inc: { existencias: -Number(item.cantidad) } });
+                }
+            }
+        }
+
         res.status(201).json(savedOrder);
     } catch (error) { 
         console.error("Error al crear orden:", error);
@@ -28,18 +38,39 @@ router.get('/', async (req, res) => {
     } catch (error) { res.status(500).json(error); }
 });
 
-// 3. Reporte Financiero Consolidado (GET /api/orders/reporte-financiero)
-// Este endpoint agrupa las ventas por día y suma los ingresos
+// 3. Estadísticas de ventas por producto (GET /api/orders/stats)
+// ⚠️ DEBE ir antes de /:id para que Express no confunda 'stats' con un ID
+router.get('/stats', async (req, res) => {
+    try {
+        const orders = await Order.find().lean();
+        const sales = {};
+        orders.forEach(order => {
+            (order.productos || []).forEach(p => {
+                sales[p.nombre] = (sales[p.nombre] || 0) + (parseInt(p.cantidad) || 0);
+            });
+        });
+        const result = Object.keys(sales)
+            .map(name => ({ name, ventas: sales[name] }))
+            .sort((a, b) => b.ventas - a.ventas)
+            .slice(0, 5);
+        res.json(result);
+    } catch (err) { 
+        console.error("Error stats:", err);
+        res.json([]); 
+    }
+});
+
+// 4. Reporte financiero consolidado (GET /api/orders/reporte-financiero)
 router.get('/reporte-financiero', async (req, res) => {
     try {
         const reporte = await Order.aggregate([
-            { $match: { estado: 'entregado' } }, // Consideramos ingresos de pedidos entregados
+            { $match: { estado: 'entregado' } },
             { $group: { 
                 _id: { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
                 totalDiario: { $sum: "$total" },
                 cantidadPedidos: { $sum: 1 }
             }},
-            { $sort: { _id: -1 } } // Ordenado de más reciente a más antiguo
+            { $sort: { _id: -1 } }
         ]);
         res.json(reporte);
     } catch (error) { 
@@ -48,7 +79,7 @@ router.get('/reporte-financiero', async (req, res) => {
     }
 });
 
-// 4. Crear preferencia (POST /api/orders/create_preference)
+// 5. Crear preferencia de MP (POST /api/orders/create_preference)
 router.post('/create_preference', async (req, res) => {
     try {
         const { items, orderId } = req.body;
@@ -58,12 +89,13 @@ router.post('/create_preference', async (req, res) => {
                 unit_price: Number(i.precio), 
                 quantity: Number(i.cantidad) 
             })),
-            external_reference: orderId, // Clave para el webhook
-           back_urls: {
-    success: "https://humorous-nourishment-production.up.railway.app/catalogo?pago=exitoso",
-    failure: "https://humorous-nourishment-production.up.railway.app/carrito",
-    pending: "https://humorous-nourishment-production.up.railway.app/catalogo"
-},
+            external_reference: orderId,
+            back_urls: {
+                success: "https://humorous-nourishment-production.up.railway.app/catalogo?pago=exitoso",
+                failure: "https://humorous-nourishment-production.up.railway.app/carrito",
+                pending: "https://humorous-nourishment-production.up.railway.app/catalogo"
+            },
+            auto_return: "approved"
         };
         const response = await mercadopago.preferences.create(preference);
         res.json({ id: response.body.id });
@@ -73,7 +105,7 @@ router.post('/create_preference', async (req, res) => {
     }
 });
 
-// 5. WEBHOOK de Mercado Pago (POST /api/orders/webhook)
+// 6. WEBHOOK de Mercado Pago (POST /api/orders/webhook)
 router.post('/webhook', async (req, res) => {
     const paymentId = req.query['data.id'];
     const topic = req.query.topic;
@@ -84,7 +116,6 @@ router.post('/webhook', async (req, res) => {
             if (payment.body.status === 'approved') {
                 const orderId = payment.body.external_reference;
                 
-                // Transacción para garantizar consistencia (Stock y Estado)
                 const session = await mongoose.startSession();
                 session.startTransaction();
                 
@@ -95,7 +126,6 @@ router.post('/webhook', async (req, res) => {
                         order.payment_id = paymentId;
                         await order.save({ session });
                         
-                        // Descuento de stock
                         for (let item of order.productos) {
                             await Product.findByIdAndUpdate(
                                 item.productoId, 
@@ -104,6 +134,7 @@ router.post('/webhook', async (req, res) => {
                             );
                         }
                         await session.commitTransaction();
+                        console.log(`✅ Pedido ${orderId} procesado`);
                     }
                 } catch (e) {
                     await session.abortTransaction();
@@ -112,10 +143,10 @@ router.post('/webhook', async (req, res) => {
             }
         } catch (error) { console.error("Error Webhook:", error); }
     }
-    res.sendStatus(200); // Siempre responder 200
+    res.sendStatus(200);
 });
 
-// 6. Actualizar estado del pedido (PATCH /api/orders/:id/status)
+// 7. Actualizar estado del pedido (PATCH /api/orders/:id/status)
 router.patch('/:id/status', async (req, res) => {
     try {
         const { nuevoEstado } = req.body;
