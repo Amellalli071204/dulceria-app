@@ -6,18 +6,18 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
 // ─── HELPER: Transporter de Gmail ─────────────────────────────────────────
-
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
     secure: false,
+    family: 4, // ✅ Forzar IPv4 para Railway
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
 });
-// ─── HELPER: Generar token temporal ───────────────────────────────────────
-// Guardamos tokens en memoria { token: { userId, expires } }
+
+// ─── HELPER: Tokens temporales en memoria ─────────────────────────────────
 const resetTokens = {};
 
 // --- RUTA DE REGISTRO ---
@@ -76,11 +76,9 @@ router.post('/forgot-password', async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            // Por seguridad siempre respondemos lo mismo
             return res.json({ msg: 'Si ese correo existe, recibirás un email en breve.' });
         }
 
-        // Generar token único de 32 bytes
         const token = crypto.randomBytes(32).toString('hex');
         const expires = Date.now() + 1000 * 60 * 30; // 30 minutos
         resetTokens[token] = { userId: user._id.toString(), expires };
@@ -128,8 +126,6 @@ router.post('/reset-password', async (req, res) => {
         }
 
         await User.findByIdAndUpdate(data.userId, { password: newPassword });
-
-        // Eliminar token para que no se reutilice
         delete resetTokens[token];
 
         res.json({ msg: '¡Contraseña actualizada con éxito!' });
