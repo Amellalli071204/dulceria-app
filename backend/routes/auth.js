@@ -2,20 +2,11 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { Resend } = require('resend');
 
-// ─── HELPER: Transporter de Gmail ─────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    family: 4, // ✅ Forzar IPv4 para Railway
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+// ─── HELPER: Resend ────────────────────────────────────────────────────────
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ─── HELPER: Tokens temporales en memoria ─────────────────────────────────
 const resetTokens = {};
@@ -85,8 +76,8 @@ router.post('/forgot-password', async (req, res) => {
 
         const resetUrl = `${process.env.FRONTEND_URL || 'https://humorous-nourishment-production.up.railway.app'}/reset-password?token=${token}`;
 
-        await transporter.sendMail({
-            from: `"Dulce Mundo 🍭" <${process.env.EMAIL_USER}>`,
+        await resend.emails.send({
+            from: 'Dulce Mundo <onboarding@resend.dev>',
             to: user.email,
             subject: '¿Olvidaste tu contraseña? 🍬',
             html: `
