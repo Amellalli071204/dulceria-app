@@ -10,7 +10,6 @@ import { createRoot } from 'react-dom/client';
 const apiUrl = import.meta.env.VITE_API_URL;
 initMercadoPago('APP_USR-bfd0d103-7998-40b5-b85f-2afe0c5a2123', { locale: 'es-MX' });
 
-// Función para mostrar el QR en un SweetAlert2
 const mostrarQR = (orderId, usuario) => {
   const container = document.createElement('div');
   container.style.display = 'flex';
@@ -49,7 +48,6 @@ const mostrarQR = (orderId, usuario) => {
     cancelButtonColor: '#9C27B0',
   }).then((result) => {
     if (result.isConfirmed) {
-      // Descargar el QR como imagen
       const canvas = container.querySelector('canvas');
       if (canvas) {
         const link = document.createElement('a');
@@ -68,6 +66,9 @@ export default function Cart() {
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
 
+  // ✅ FIX: total siempre como número con 2 decimales
+  const totalFinal = Number(totalPrice).toFixed(2);
+
   const handleMercadoPago = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -83,7 +84,6 @@ export default function Cart() {
     setIsProcessing(true);
 
     try {
-      // Paso 1: Crear el pedido en la DB con estado 'pendiente'
       const orderRes = await axios.post(`${apiUrl}/api/orders`, {
         usuario: localStorage.getItem('userName') || 'Cliente',
         telefono: localStorage.getItem('userPhone') || '',
@@ -91,20 +91,19 @@ export default function Cart() {
           productoId: i._id,
           nombre: i.nombre,
           cantidad: i.qty,
-          precio: i.precio
+          precio: Number(i.precio)
         })),
-        total: totalPrice,
+        total: Number(totalFinal), // ✅ FIX: enviamos número, no string
         metodoPago: 'mercadopago'
       });
 
       const orderId = orderRes.data._id;
 
-      // Paso 2: Crear preferencia de MP con el orderId
       const prefRes = await axios.post(`${apiUrl}/api/orders/create_preference`, {
         items: cart.map(item => ({
           nombre: item.nombre,
           cantidad: item.qty,
-          precio: item.precio
+          precio: Number(item.precio)
         })),
         orderId
       });
@@ -159,21 +158,16 @@ export default function Cart() {
           productoId: i._id,
           nombre: i.nombre,
           cantidad: i.qty,
-          precio: i.precio
+          precio: Number(i.precio)
         })),
-        total: totalPrice,
+        total: Number(totalFinal), // ✅ FIX: enviamos número, no string
         metodoPago: 'efectivo'
       });
 
       if (res.status === 200 || res.status === 201) {
         const orderId = res.data._id;
-
         if (typeof clearCart === 'function') clearCart();
-
-        // Mostrar QR con el ID del pedido
         mostrarQR(orderId, usuario);
-
-        // Redirigir al catálogo después de cerrar el QR
         setTimeout(() => navigate('/catalogo'), 100);
       }
     } catch (error) {
@@ -218,7 +212,7 @@ export default function Cart() {
       </div>
 
       <div style={summaryStyle}>
-        <h2 style={{ margin: '0', color: '#E91E63' }}>Total: ${totalPrice}</h2>
+        <h2 style={{ margin: '0', color: '#E91E63' }}>Total: ${totalFinal}</h2>
       </div>
 
       <div style={actionsStyle}>
