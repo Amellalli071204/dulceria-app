@@ -4,9 +4,23 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const mongoose = require('mongoose');
 const mercadopago = require('mercadopago');
+const fetch = require('node-fetch');
 
 // Configuración SDK Mercado Pago
 mercadopago.configure({ access_token: process.env.MP_ACCESS_TOKEN });
+
+// ─── HELPER: Notificar al admin por WhatsApp ───────────────────────────────
+const notificarAdmin = async (mensaje) => {
+    try {
+        const phone = process.env.ADMIN_WHATSAPP;
+        const apikey = process.env.CALLMEBOT_APIKEY;
+        const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;
+        await fetch(url);
+        console.log("📱 WhatsApp enviado al admin");
+    } catch (err) {
+        console.error("❌ Error notificación WhatsApp:", err);
+    }
+};
 
 // 1. Crear pedido (POST /api/orders)
 router.post('/', async (req, res) => {
@@ -23,10 +37,17 @@ router.post('/', async (req, res) => {
             }
         }
 
+        // Notificar al admin
+        const productosTexto = savedOrder.productos
+            .map(p => `  • ${p.nombre} x${p.cantidad}`)
+            .join('\n');
+        const msg = `🍭 *Nuevo Pedido - Dulce Mundo*\n\n👤 Cliente: ${savedOrder.usuario}\n📞 Tel: ${savedOrder.telefono || 'Sin número'}\n\n🛍️ Productos:\n${productosTexto}\n\n💰 Total: $${savedOrder.total}\n💳 Pago: ${savedOrder.metodoPago === 'mercadopago' ? 'Mercado Pago' : 'Efectivo'}\n🕐 ${new Date().toLocaleString('es-MX')}`;
+        await notificarAdmin(msg);
+
         res.status(201).json(savedOrder);
-    } catch (error) { 
+    } catch (error) {
         console.error("Error al crear orden:", error);
-        res.status(500).json(error); 
+        res.status(500).json(error);
     }
 });
 
@@ -39,7 +60,7 @@ router.get('/', async (req, res) => {
 });
 
 // 3. Estadísticas de ventas por producto (GET /api/orders/stats)
-// ⚠️ DEBE ir antes de /:id para que Express no confunda 'stats' con un ID
+// ⚠️ DEBE ir antes de /:id
 router.get('/stats', async (req, res) => {
     try {
         const orders = await Order.find().lean();
@@ -54,9 +75,9 @@ router.get('/stats', async (req, res) => {
             .sort((a, b) => b.ventas - a.ventas)
             .slice(0, 5);
         res.json(result);
-    } catch (err) { 
+    } catch (err) {
         console.error("Error stats:", err);
-        res.json([]); 
+        res.json([]);
     }
 });
 
@@ -65,7 +86,7 @@ router.get('/reporte-financiero', async (req, res) => {
     try {
         const reporte = await Order.aggregate([
             { $match: { estado: 'entregado' } },
-            { $group: { 
+            { $group: {
                 _id: { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
                 totalDiario: { $sum: "$total" },
                 cantidadPedidos: { $sum: 1 }
@@ -73,9 +94,9 @@ router.get('/reporte-financiero', async (req, res) => {
             { $sort: { _id: -1 } }
         ]);
         res.json(reporte);
-    } catch (error) { 
+    } catch (error) {
         console.error("Error en reporte financiero:", error);
-        res.status(500).json({ error: "Error al generar reporte financiero" }); 
+        res.status(500).json({ error: "Error al generar reporte financiero" });
     }
 });
 
@@ -84,10 +105,10 @@ router.post('/create_preference', async (req, res) => {
     try {
         const { items, orderId } = req.body;
         const preference = {
-            items: items.map(i => ({ 
-                title: i.nombre, 
-                unit_price: Number(i.precio), 
-                quantity: Number(i.cantidad) 
+            items: items.map(i => ({
+                title: i.nombre,
+                unit_price: Number(i.precio),
+                quantity: Number(i.cantidad)
             })),
             external_reference: orderId,
             back_urls: {
@@ -99,9 +120,9 @@ router.post('/create_preference', async (req, res) => {
         };
         const response = await mercadopago.preferences.create(preference);
         res.json({ id: response.body.id });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error MP:", error);
-        res.status(500).json(error); 
+        res.status(500).json(error);
     }
 });
 
@@ -115,26 +136,30 @@ router.post('/webhook', async (req, res) => {
             const payment = await mercadopago.payment.findById(paymentId);
             if (payment.body.status === 'approved') {
                 const orderId = payment.body.external_reference;
-                
+
                 const session = await mongoose.startSession();
                 session.startTransaction();
-                
+
                 try {
                     const order = await Order.findById(orderId).session(session);
                     if (order && order.estado === 'pendiente') {
                         order.estado = 'pagado';
                         order.payment_id = paymentId;
                         await order.save({ session });
-                        
+
                         for (let item of order.productos) {
                             await Product.findByIdAndUpdate(
-                                item.productoId, 
-                                { $inc: { existencias: -item.cantidad } }, 
+                                item.productoId,
+                                { $inc: { existencias: -item.cantidad } },
                                 { session }
                             );
                         }
                         await session.commitTransaction();
                         console.log(`✅ Pedido ${orderId} procesado`);
+
+                        // Notificar al admin que el pago de MP fue aprobado
+                        const msg = `✅ *Pago Aprobado - Mercado Pago*\n\n👤 Cliente: ${order.usuario}\n💰 Total: $${order.total}\n🆔 Payment ID: ${paymentId}\n🕐 ${new Date().toLocaleString('es-MX')}`;
+                        await notificarAdmin(msg);
                     }
                 } catch (e) {
                     await session.abortTransaction();
@@ -146,8 +171,7 @@ router.post('/webhook', async (req, res) => {
     res.sendStatus(200);
 });
 
-
-// 8. Pedidos de un cliente (GET /api/orders/mis-pedidos?usuario=Nombre)
+// 7. Pedidos de un cliente (GET /api/orders/mis-pedidos?usuario=Nombre)
 // ⚠️ DEBE ir antes de /:id
 router.get('/mis-pedidos', async (req, res) => {
     try {
@@ -161,11 +185,23 @@ router.get('/mis-pedidos', async (req, res) => {
     }
 });
 
-// 7. Actualizar estado del pedido (PATCH /api/orders/:id/status)
+// 8. Actualizar estado del pedido (PATCH /api/orders/:id/status)
 router.patch('/:id/status', async (req, res) => {
     try {
         const { nuevoEstado } = req.body;
         await Order.findByIdAndUpdate(req.params.id, { estado: nuevoEstado });
+
+        // Notificar al admin del cambio de estado
+        const pedido = await Order.findById(req.params.id);
+        const estadoEmoji = {
+            pendiente: '⏳',
+            pagado: '💳',
+            entregado: '📦'
+        };
+        const emoji = estadoEmoji[nuevoEstado] || '🔄';
+        const msg = `${emoji} *Pedido Actualizado - Dulce Mundo*\n\n👤 Cliente: ${pedido.usuario}\n📞 Tel: ${pedido.telefono || 'Sin número'}\n🔄 Estado: ${nuevoEstado.toUpperCase()}\n💰 Total: $${pedido.total}\n🕐 ${new Date().toLocaleString('es-MX')}`;
+        await notificarAdmin(msg);
+
         res.json({ message: "Estado actualizado" });
     } catch (error) { res.status(500).json(error); }
 });
