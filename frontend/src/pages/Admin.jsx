@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'; 
 import axios from 'axios';
-import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar, FaUserLock, FaQrcode, FaEdit } from 'react-icons/fa'; 
+import { FaWhatsapp, FaPlusCircle, FaBoxOpen, FaFileInvoiceDollar, FaUserLock, FaQrcode, FaEdit, FaFilter } from 'react-icons/fa'; 
 import Swal from 'sweetalert2'; 
 import jsPDF from 'jspdf'; 
 import autoTable from 'jspdf-autotable';
@@ -15,7 +15,11 @@ export default function Admin() {
     const [products, setProducts] = useState([]);
     const [loadingId, setLoadingId] = useState(null);
     const [showScanner, setShowScanner] = useState(false);
-    const [editProduct, setEditProduct] = useState(null); // producto siendo editado
+    const [editProduct, setEditProduct] = useState(null);
+
+    // Filtros de pedidos
+    const [filtroEstado, setFiltroEstado] = useState('todos');
+    const [filtroMetodo, setFiltroMetodo] = useState('todos');
 
     const [newProduct, setNewProduct] = useState({
         nombre: '', descripcion: '', precio: '', imagen: '', existencias: ''
@@ -54,16 +58,20 @@ export default function Admin() {
         } catch (error) { console.error("Error productos:", error); }
     };
 
+    // Pedidos filtrados
+    const pedidosFiltrados = orders.filter(order => {
+        const estadoOk = filtroEstado === 'todos' || order.estado === filtroEstado;
+        const metodoOk = filtroMetodo === 'todos' || order.metodoPago === filtroMetodo;
+        return estadoOk && metodoOk;
+    });
+
     const handleToggleAdmin = async (id, currentStatus, nombre) => { 
         const confirm = await Swal.fire({ 
             title: `¿${!currentStatus ? 'Hacer' : 'Quitar'} Admin a ${nombre}?`, 
             text: "¡Asegúrate de confiar en este usuario! 🍭⚙️", 
-            icon: 'warning', 
-            showCancelButton: true, 
-            confirmButtonColor: '#E91E63', 
-            cancelButtonColor: '#4A148C', 
-            confirmButtonText: 'Sí, cambiar', 
-            cancelButtonText: 'Cancelar' 
+            icon: 'warning', showCancelButton: true, 
+            confirmButtonColor: '#E91E63', cancelButtonColor: '#4A148C', 
+            confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' 
         });
         if (confirm.isConfirmed) { 
             try { 
@@ -72,9 +80,7 @@ export default function Admin() {
                 });
                 Swal.fire('¡Éxito!', `${nombre} ha cambiado de rango.`, 'success'); 
                 fetchUsers(); 
-            } catch (e) { 
-                Swal.fire('Error', 'No se pudo actualizar el usuario', 'error');
-            } 
+            } catch (e) { Swal.fire('Error', 'No se pudo actualizar el usuario', 'error'); } 
         } 
     };
 
@@ -85,8 +91,7 @@ export default function Admin() {
             img.crossOrigin = 'Anonymous'; 
             img.onload = () => { 
                 const canvas = document.createElement('canvas'); 
-                canvas.width = img.width; 
-                canvas.height = img.height; 
+                canvas.width = img.width; canvas.height = img.height; 
                 const ctx = canvas.getContext('2d'); 
                 ctx.drawImage(img, 0, 0); 
                 resolve(canvas.toDataURL('image/jpeg')); 
@@ -100,14 +105,11 @@ export default function Admin() {
         try { 
             const imgData = await getLogoBase64(); 
             doc.addImage(imgData, 'JPEG', 82, 10, 45, 45); 
-            doc.setFontSize(22);
-            doc.setTextColor(233, 30, 99); 
+            doc.setFontSize(22); doc.setTextColor(233, 30, 99); 
             doc.text("Dulce Mundo", 105, 60, { align: 'center' }); 
-            doc.setFontSize(10); 
-            doc.setTextColor(100);
+            doc.setFontSize(10); doc.setTextColor(100);
             doc.text("Santa Isabel Ixtapan, Atenco, Edo. Mex.", 105, 68, { align: 'center' }); 
-            doc.setFontSize(12); 
-            doc.setTextColor(0); 
+            doc.setFontSize(12); doc.setTextColor(0); 
             doc.text(`Cliente: ${order.usuario}`, 20, 80); 
             doc.text(`WhatsApp: ${order.telefono}`, 20, 87);
             doc.text(`Fecha: ${new Date(order.fecha).toLocaleString()}`, 20, 94); 
@@ -115,19 +117,11 @@ export default function Admin() {
             const body = order.productos.map(p => [ 
                 p.nombre, p.cantidad, `$${p.precio}`, `$${(p.cantidad * p.precio).toFixed(2)}` 
             ]);
-            autoTable(doc, { 
-                startY: 110, 
-                head: [['Producto', 'Cant.', 'Precio U.', 'Subtotal']], 
-                body: body, 
-                headStyles: { fillStyle: [233, 30, 99] }, 
-                theme: 'striped' 
-            });
+            autoTable(doc, { startY: 110, head: [['Producto', 'Cant.', 'Precio U.', 'Subtotal']], body, headStyles: { fillStyle: [233, 30, 99] }, theme: 'striped' });
             const finalY = doc.lastAutoTable.finalY; 
-            doc.setFontSize(14); 
-            doc.setFont("helvetica", "bold"); 
+            doc.setFontSize(14); doc.setFont("helvetica", "bold"); 
             doc.text(`TOTAL A PAGAR: $${order.total}`, 140, finalY + 15); 
-            doc.setFontSize(10); 
-            doc.setFont("helvetica", "italic");
+            doc.setFontSize(10); doc.setFont("helvetica", "italic");
             doc.text("¡Gracias por endulzar tu día!", 105, finalY + 30, { align: 'center' }); 
             doc.save(`Ticket_${order.usuario}.pdf`);
             const mensaje = `Hola ${order.usuario}, ¡gracias por tu compra en Dulce Mundo! 🍭 Aquí tienes tu ticket por $${order.total}.`; 
@@ -146,11 +140,8 @@ export default function Admin() {
             });
             Swal.fire({ title: 'Actualizado', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false }); 
             fetchOrders();
-        } catch (error) { 
-            Swal.fire('Error', 'No se pudo actualizar', 'error'); 
-        } finally { 
-            setLoadingId(null); 
-        } 
+        } catch (error) { Swal.fire('Error', 'No se pudo actualizar', 'error'); } 
+        finally { setLoadingId(null); } 
     };
 
     const handleAddProduct = async (e) => { 
@@ -162,9 +153,7 @@ export default function Admin() {
             Swal.fire('¡Éxito!', 'Dulce agregado al inventario', 'success'); 
             setNewProduct({ nombre: '', descripcion: '', precio: '', imagen: '', existencias: '' });
             fetchProducts();
-        } catch (error) { 
-            Swal.fire('Error', 'No se pudo guardar el producto', 'error'); 
-        } 
+        } catch (error) { Swal.fire('Error', 'No se pudo guardar el producto', 'error'); } 
     };
 
     const handleEditProduct = async (e) => {
@@ -176,32 +165,21 @@ export default function Admin() {
             Swal.fire({ title: '¡Actualizado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
             setEditProduct(null);
             fetchProducts();
-        } catch (error) {
-            Swal.fire('Error', 'No se pudo actualizar el producto', 'error');
-        }
+        } catch (error) { Swal.fire('Error', 'No se pudo actualizar el producto', 'error'); }
     };
 
     const handleDeleteProduct = async (id, nombre) => {
         const confirm = await Swal.fire({
-            title: `¿Eliminar "${nombre}"?`,
-            text: 'Esta acción no se puede deshacer.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#E91E63',
-            cancelButtonColor: '#4A148C',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
+            title: `¿Eliminar "${nombre}"?`, text: 'Esta acción no se puede deshacer.', icon: 'warning',
+            showCancelButton: true, confirmButtonColor: '#E91E63', cancelButtonColor: '#4A148C',
+            confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar'
         });
         if (confirm.isConfirmed) {
             try {
-                await axios.delete(`${apiUrl}/api/products/${id}`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
+                await axios.delete(`${apiUrl}/api/products/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                 Swal.fire({ title: 'Eliminado', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
                 fetchProducts();
-            } catch (error) {
-                Swal.fire('Error', 'No se pudo eliminar el producto', 'error');
-            }
+            } catch (error) { Swal.fire('Error', 'No se pudo eliminar el producto', 'error'); }
         }
     };
 
@@ -209,17 +187,10 @@ export default function Admin() {
         if (!scannedId) return;
         setShowScanner(false);
         Swal.fire({
-            title: 'Código QR Detectado',
-            text: `¿Marcar el pedido como entregado?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#4CAF50',
-            cancelButtonColor: '#E91E63',
-            confirmButtonText: 'Sí, entregar',
-            cancelButtonText: 'Cancelar'
-        }).then((res) => {
-            if (res.isConfirmed) handleUpdateStatus(scannedId, 'entregado');
-        });
+            title: 'Código QR Detectado', text: `¿Marcar el pedido como entregado?`, icon: 'question',
+            showCancelButton: true, confirmButtonColor: '#4CAF50', cancelButtonColor: '#E91E63',
+            confirmButtonText: 'Sí, entregar', cancelButtonText: 'Cancelar'
+        }).then((res) => { if (res.isConfirmed) handleUpdateStatus(scannedId, 'entregado'); });
     };
 
     // --- REPORTE FINANCIERO ---
@@ -236,6 +207,16 @@ export default function Admin() {
         resumenMetodo[metodo].cantidad += 1;
         if (o.estado === 'pagado' || o.estado === 'entregado') resumenMetodo[metodo].total += (o.total || 0);
     });
+
+    const estadoBadge = (estado) => {
+        const config = {
+            pendiente: { bg: '#FFF9C4', color: '#F57F17', label: 'PENDIENTE' },
+            pagado:    { bg: '#E8EAF6', color: '#3949AB', label: 'PAGADO' },
+            entregado: { bg: '#E8F5E9', color: '#2E7D32', label: 'ENTREGADO' },
+        };
+        const c = config[estado] || { bg: '#eee', color: '#333', label: estado?.toUpperCase() };
+        return <span style={{ background: c.bg, color: c.color, padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold' }}>{c.label}</span>;
+    };
 
     return ( 
         <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}> 
@@ -312,8 +293,6 @@ export default function Admin() {
                 <h2 style={{ color: '#9C27B0', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                     <FaPlusCircle /> Inventario de Dulces
                 </h2>
-
-                {/* Formulario agregar */}
                 <h3 style={{ color: '#4A148C', marginBottom: '10px' }}>Agregar nuevo dulce</h3>
                 <form onSubmit={handleAddProduct} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}> 
                     <input style={inputStyle} placeholder="Nombre del dulce" value={newProduct.nombre} onChange={e => setNewProduct({...newProduct, nombre: e.target.value})} required /> 
@@ -324,7 +303,6 @@ export default function Admin() {
                     <button type="submit" style={saveButtonStyle}>Guardar en Inventario</button>
                 </form>
 
-                {/* Modal edición inline */}
                 {editProduct && (
                     <div style={{ background: '#FFF0F5', border: '2px solid #E91E63', borderRadius: '12px', padding: '20px', marginBottom: '25px' }}>
                         <h3 style={{ color: '#E91E63', marginBottom: '15px' }}>✏️ Editando: {editProduct.nombre}</h3>
@@ -340,7 +318,6 @@ export default function Admin() {
                     </div>
                 )}
 
-                {/* Tabla de productos */}
                 <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #eee' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
@@ -361,13 +338,15 @@ export default function Admin() {
                                             {p.existencias}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                        <button onClick={() => setEditProduct(p)} style={{ background: '#9C27B0', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                                            <FaEdit /> Editar
-                                        </button>
-                                        <button onClick={() => handleDeleteProduct(p._id, p.nombre)} style={{ background: '#E91E63', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                            🗑️ Eliminar
-                                        </button>
+                                    <td style={{ padding: '12px' }}>
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                            <button onClick={() => setEditProduct(p)} style={{ background: '#9C27B0', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                                                <FaEdit /> Editar
+                                            </button>
+                                            <button onClick={() => handleDeleteProduct(p._id, p.nombre)} style={{ background: '#E91E63', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                                🗑️ Eliminar
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -393,46 +372,83 @@ export default function Admin() {
                 </div>
             </div>
 
-            {/* --- PEDIDOS RECIENTES --- */} 
-            <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}> 
-                <FaBoxOpen /> Pedidos Recientes 
-            </h2> 
+            {/* --- PEDIDOS RECIENTES CON FILTROS --- */} 
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px', marginBottom: '15px' }}>
+                <h2 style={{ color: '#E91E63', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}> 
+                    <FaBoxOpen /> Pedidos Recientes
+                    <span style={{ fontSize: '0.9rem', color: '#aaa', fontWeight: 'normal' }}>({pedidosFiltrados.length} resultados)</span>
+                </h2>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <FaFilter style={{ color: '#9C27B0' }} />
+                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={selectStyle}>
+                        <option value="todos">Todos los estados</option>
+                        <option value="pendiente">⏳ Pendiente</option>
+                        <option value="pagado">💳 Pagado</option>
+                        <option value="entregado">📦 Entregado</option>
+                    </select>
+                    <select value={filtroMetodo} onChange={e => setFiltroMetodo(e.target.value)} style={selectStyle}>
+                        <option value="todos">Todos los métodos</option>
+                        <option value="efectivo">💵 Efectivo</option>
+                        <option value="mercadopago">💳 Mercado Pago</option>
+                    </select>
+                    {(filtroEstado !== 'todos' || filtroMetodo !== 'todos') && (
+                        <button onClick={() => { setFiltroEstado('todos'); setFiltroMetodo('todos'); }} style={{ background: 'none', border: '1px solid #E91E63', color: '#E91E63', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                            ✕ Limpiar filtros
+                        </button>
+                    )}
+                </div>
+            </div>
+
             <div style={{ overflowX: 'auto', background: 'white', borderRadius: '10px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}> 
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}> 
                     <thead>
                         <tr style={{ background: '#E91E63', color: 'white' }}> 
                             <th style={{ padding: '15px' }}>Fecha</th> 
                             <th style={{ padding: '15px' }}>Cliente</th> 
+                            <th style={{ padding: '15px' }}>Método</th>
                             <th style={{ padding: '15px' }}>WhatsApp / Ticket</th> 
                             <th style={{ padding: '15px' }}>Total</th> 
-                            <th style={{ padding: '15px' }}>Acciones</th> 
+                            <th style={{ padding: '15px' }}>Estado</th>
+                            <th style={{ padding: '15px' }}>Acción</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {orders.map(order => ( 
-                            <tr key={order._id} style={{ borderBottom: '1px solid #eee', textAlign: 'center' }}> 
-                                <td style={{ padding: '12px' }}>{new Date(order.fecha).toLocaleDateString()}</td> 
-                                <td style={{ fontWeight: 'bold' }}>{order.usuario}</td> 
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}> 
-                                        {order.telefono} 
-                                        <button onClick={() => generarTicket(order)} style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '1.4rem' }}>
-                                            <FaWhatsapp />
-                                        </button>
-                                    </div>
-                                </td>
-                                <td>${order.total}</td> 
-                                <td style={{ padding: '10px' }}> 
-                                    <button 
-                                        onClick={() => handleUpdateStatus(order._id, order.estado === 'pendiente' ? 'pagado' : 'entregado')} 
-                                        disabled={loadingId === order._id} 
-                                        style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', background: loadingId === order._id ? '#ccc' : (order.estado === 'pendiente' ? '#FFEB3B' : '#C8E6C9'), cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }} 
-                                    > 
-                                        {loadingId === order._id ? "..." : order.estado.toUpperCase()} 
-                                    </button> 
-                                </td>
-                            </tr> 
-                        ))} 
+                        {pedidosFiltrados.length === 0 ? (
+                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#aaa' }}>No hay pedidos con estos filtros 🔍</td></tr>
+                        ) : (
+                            pedidosFiltrados.map(order => ( 
+                                <tr key={order._id} style={{ borderBottom: '1px solid #eee', textAlign: 'center' }}> 
+                                    <td style={{ padding: '12px' }}>{new Date(order.fecha).toLocaleDateString()}</td> 
+                                    <td style={{ fontWeight: 'bold' }}>{order.usuario}</td>
+                                    <td style={{ padding: '12px' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: order.metodoPago === 'mercadopago' ? '#009ee3' : '#4CAF50' }}>
+                                            {order.metodoPago === 'mercadopago' ? '💳 MP' : '💵 Efectivo'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}> 
+                                            {order.telefono} 
+                                            <button onClick={() => generarTicket(order)} style={{ background: 'none', border: 'none', color: '#25D366', cursor: 'pointer', fontSize: '1.4rem' }}>
+                                                <FaWhatsapp />
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td style={{ fontWeight: 'bold' }}>${order.total}</td>
+                                    <td style={{ padding: '12px' }}>{estadoBadge(order.estado)}</td>
+                                    <td style={{ padding: '10px' }}> 
+                                        {order.estado !== 'entregado' && (
+                                            <button 
+                                                onClick={() => handleUpdateStatus(order._id, order.estado === 'pendiente' ? 'pagado' : 'entregado')} 
+                                                disabled={loadingId === order._id} 
+                                                style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', background: loadingId === order._id ? '#ccc' : '#9C27B0', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }} 
+                                            > 
+                                                {loadingId === order._id ? "..." : order.estado === 'pendiente' ? 'Marcar pagado' : 'Marcar entregado'} 
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr> 
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -445,3 +461,4 @@ const saveButtonStyle = { gridColumn: 'span 2', background: '#9C27B0', color: 'w
 const cardStyle = { background: '#FFF0F5', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #FCE4EC' };
 const cardTitleStyle = { color: '#9C27B0', fontSize: '0.9rem', textTransform: 'uppercase', margin: '0 0 10px 0' };
 const cardValueStyle = { color: '#E91E63', fontSize: '1.8rem', fontWeight: 'bold', margin: '0' };
+const selectStyle = { padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', color: '#4A148C', cursor: 'pointer', outline: 'none', background: 'white' };
