@@ -6,14 +6,16 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
 // ─── HELPER: Transporter de Gmail ─────────────────────────────────────────
+
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
 });
-
 // ─── HELPER: Generar token temporal ───────────────────────────────────────
 // Guardamos tokens en memoria { token: { userId, expires } }
 const resetTokens = {};
