@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 
-// OBTENER TODOS LOS PRODUCTOS (Para el catálogo)
+// OBTENER TODOS LOS PRODUCTOS
 router.get('/', async (req, res) => {
     try {
         const products = await Product.find();
@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// AGREGAR PRODUCTO (Para el Admin)
+// AGREGAR PRODUCTO
 router.post('/', async (req, res) => {
     const { nombre, descripcion, precio, imagen, existencias } = req.body;
     try {
@@ -21,6 +21,22 @@ router.post('/', async (req, res) => {
         res.json(product);
     } catch (err) {
         res.status(500).send('Error al guardar producto');
+    }
+});
+
+// EDITAR PRODUCTO ← NUEVO
+router.put('/:id', async (req, res) => {
+    const { nombre, descripcion, precio, imagen, existencias } = req.body;
+    try {
+        const updated = await Product.findByIdAndUpdate(
+            req.params.id,
+            { nombre, descripcion, precio, imagen, existencias },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ msg: 'Producto no encontrado' });
+        res.json(updated);
+    } catch (err) {
+        res.status(500).send('Error al editar producto');
     }
 });
 
