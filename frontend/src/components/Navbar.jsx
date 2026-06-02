@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { FaShoppingCart, FaUserLock, FaStore, FaSignOutAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaUserLock, FaStore, FaSignOutAlt, FaListAlt } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
 export default function Navbar() {
@@ -32,7 +32,6 @@ export default function Navbar() {
           timer: 1500,
           showConfirmButton: false
         });
-
         setTimeout(() => {
           navigate('/login');
           window.location.reload();
@@ -43,39 +42,39 @@ export default function Navbar() {
 
   return (
     <nav style={navContainerStyle}>
-      {/* Logo y Nombre con Efecto CANDY */}
       <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'white', textDecoration: 'none' }}>
         <img 
           src="/logo.jpg" 
           alt="Logo Dulce Mundo" 
           style={{ width: '45px', height: '45px', borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }} 
         />
-        <span style={candyTitleStyle}>
-          Dulce Mundo 🍭
-        </span>
+        <span style={candyTitleStyle}>Dulce Mundo 🍭</span>
       </Link>
 
-      {/* Enlaces Condicionados */}
       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
         {token && (
-          <Link to="/catalogo" style={linkStyle}><FaStore/> Catálogo</Link>
+          <Link to="/catalogo" style={linkStyle}><FaStore /> Catálogo</Link>
+        )}
+
+        {token && (
+          <Link to="/mis-pedidos" style={linkStyle}><FaListAlt /> Mis Pedidos</Link>
         )}
         
         {isAdmin && (
-          <Link to="/admin" style={{ ...linkStyle, color: '#FFEB3B' }}><FaUserLock/> Admin</Link>
+          <Link to="/admin" style={{ ...linkStyle, color: '#FFEB3B' }}><FaUserLock /> Admin</Link>
         )}
         
         {token && (
           <Link to="/carrito" style={cartButtonStyle}>
-             <FaShoppingCart/> 
-             <span>Carrito</span>
-             <span style={badgeStyle}>{totalItems}</span>
+            <FaShoppingCart /> 
+            <span>Carrito</span>
+            <span style={badgeStyle}>{totalItems}</span>
           </Link>
         )}
 
         {token && (
           <button onClick={handleLogout} style={logoutButtonStyle}>
-            <FaSignOutAlt/> Salir
+            <FaSignOutAlt /> Salir
           </button>
         )}
       </div>
@@ -83,13 +82,11 @@ export default function Navbar() {
   );
 }
 
-// --- NUEVO ESTILO CANDY 3D ---
 const candyTitleStyle = {
   fontSize: '1.8rem',
-  fontFamily: "'Fredoka One', cursive", // Asegúrate de tenerla en index.html
+  fontFamily: "'Fredoka One', cursive",
   color: '#FFFFFF',
   letterSpacing: '1px',
-  // Este es el truco para el efecto de la imagen (borde y profundidad)
   textShadow: `
     2px 2px 0px #C2185B, 
     -1px -1px 0px #C2185B, 
@@ -99,7 +96,6 @@ const candyTitleStyle = {
   `
 };
 
-// --- ESTILOS ORIGINALES PRESERVADOS ---
 const navContainerStyle = {
   display: 'flex', 
   justifyContent: 'space-between', 
