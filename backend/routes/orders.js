@@ -27,14 +27,14 @@ router.post('/', async (req, res) => {
     try {
         const body = req.body;
 
-        // ✅ FIX: Recalcular total en el backend para evitar strings del frontend
+        // ✅ FIX: Recalcular total en el backend
         const totalCalculado = (body.productos || []).reduce((acc, p) => {
             return acc + (Number(p.cantidad) * Number(p.precio));
         }, 0);
 
         const newOrder = new Order({
             ...body,
-            total: totalCalculado // Siempre usamos el total recalculado
+            total: totalCalculado
         });
         const savedOrder = await newOrder.save();
 
@@ -47,11 +47,26 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // Notificar al admin
+        // Notificar al admin — sin emojis cerca del total para evitar cortes
         const productosTexto = savedOrder.productos
-            .map(p => `  • ${p.nombre} x${p.cantidad}`)
+            .map(p => `- ${p.nombre} x${p.cantidad}`)
             .join('\n');
-        const msg = `🍭 *Nuevo Pedido - Dulce Mundo*\n\n👤 Cliente: ${savedOrder.usuario}\n📞 Tel: ${savedOrder.telefono || 'Sin número'}\n\n🛍️ Productos:\n${productosTexto}\n\n💰 Total: $${savedOrder.total.toFixed(2)}\n💳 Pago: ${savedOrder.metodoPago === 'mercadopago' ? 'Mercado Pago' : 'Efectivo'}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
+        const totalTexto = savedOrder.total.toFixed(2);
+        const hora = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+        const metodo = savedOrder.metodoPago === 'mercadopago' ? 'Mercado Pago' : 'Efectivo';
+        const msg = [
+            '🍭 Nuevo Pedido - Dulce Mundo',
+            '',
+            `Cliente: ${savedOrder.usuario}`,
+            `Tel: ${savedOrder.telefono || 'Sin numero'}`,
+            '',
+            'Productos:',
+            productosTexto,
+            '',
+            `Total: $${totalTexto}`,
+            `Pago: ${metodo}`,
+            `Hora: ${hora}`
+        ].join('\n');
         await notificarAdmin(msg);
 
         res.status(201).json(savedOrder);
@@ -145,17 +160,14 @@ router.post('/webhook', async (req, res) => {
             const payment = await mercadopago.payment.findById(paymentId);
             if (payment.body.status === 'approved') {
                 const orderId = payment.body.external_reference;
-
                 const session = await mongoose.startSession();
                 session.startTransaction();
-
                 try {
                     const order = await Order.findById(orderId).session(session);
                     if (order && order.estado === 'pendiente') {
                         order.estado = 'pagado';
                         order.payment_id = paymentId;
                         await order.save({ session });
-
                         for (let item of order.productos) {
                             await Product.findByIdAndUpdate(
                                 item.productoId,
@@ -165,8 +177,15 @@ router.post('/webhook', async (req, res) => {
                         }
                         await session.commitTransaction();
                         console.log(`✅ Pedido ${orderId} procesado`);
-
-                        const msg = `✅ *Pago Aprobado - Mercado Pago*\n\n👤 Cliente: ${order.usuario}\n💰 Total: $${order.total.toFixed(2)}\n🆔 Payment ID: ${paymentId}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
+                        const hora = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+                        const msg = [
+                            '✅ Pago Aprobado - Mercado Pago',
+                            '',
+                            `Cliente: ${order.usuario}`,
+                            `Total: $${order.total.toFixed(2)}`,
+                            `Payment ID: ${paymentId}`,
+                            `Hora: ${hora}`
+                        ].join('\n');
                         await notificarAdmin(msg);
                     }
                 } catch (e) {
@@ -197,17 +216,20 @@ router.patch('/:id/status', async (req, res) => {
     try {
         const { nuevoEstado } = req.body;
         await Order.findByIdAndUpdate(req.params.id, { estado: nuevoEstado });
-
         const pedido = await Order.findById(req.params.id);
-        const estadoEmoji = {
-            pendiente: '⏳',
-            pagado: '💳',
-            entregado: '📦'
-        };
+        const estadoEmoji = { pendiente: '⏳', pagado: '💳', entregado: '📦' };
         const emoji = estadoEmoji[nuevoEstado] || '🔄';
-        const msg = `${emoji} *Pedido Actualizado - Dulce Mundo*\n\n👤 Cliente: ${pedido.usuario}\n📞 Tel: ${pedido.telefono || 'Sin número'}\n🔄 Estado: ${nuevoEstado.toUpperCase()}\n💰 Total: $${pedido.total.toFixed(2)}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
+        const hora = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+        const msg = [
+            `${emoji} Pedido Actualizado - Dulce Mundo`,
+            '',
+            `Cliente: ${pedido.usuario}`,
+            `Tel: ${pedido.telefono || 'Sin numero'}`,
+            `Estado: ${nuevoEstado.toUpperCase()}`,
+            `Total: $${pedido.total.toFixed(2)}`,
+            `Hora: ${hora}`
+        ].join('\n');
         await notificarAdmin(msg);
-
         res.json({ message: "Estado actualizado" });
     } catch (error) { res.status(500).json(error); }
 });
