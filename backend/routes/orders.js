@@ -27,10 +27,15 @@ router.post('/', async (req, res) => {
     try {
         const body = req.body;
 
+        // 🔍 DEBUG
+        console.log("PRODUCTOS RECIBIDOS:", JSON.stringify(body.productos));
+        console.log("TOTAL FRONTEND:", body.total);
+
         // ✅ FIX: Recalcular total en el backend
         const totalCalculado = (body.productos || []).reduce((acc, p) => {
             return acc + (Number(p.cantidad) * Number(p.precio));
         }, 0);
+        console.log("TOTAL CALCULADO:", totalCalculado);
 
         const newOrder = new Order({
             ...body,
