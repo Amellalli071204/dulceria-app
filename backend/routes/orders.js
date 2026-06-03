@@ -25,12 +25,22 @@ const notificarAdmin = async (mensaje) => {
 // 1. Crear pedido (POST /api/orders)
 router.post('/', async (req, res) => {
     try {
-        const newOrder = new Order(req.body);
+        const body = req.body;
+
+        // ✅ FIX: Recalcular total en el backend para evitar strings del frontend
+        const totalCalculado = (body.productos || []).reduce((acc, p) => {
+            return acc + (Number(p.cantidad) * Number(p.precio));
+        }, 0);
+
+        const newOrder = new Order({
+            ...body,
+            total: totalCalculado // Siempre usamos el total recalculado
+        });
         const savedOrder = await newOrder.save();
 
         // Descontar stock si es efectivo
-        if (req.body.metodoPago === 'efectivo' && req.body.productos) {
-            for (const item of req.body.productos) {
+        if (body.metodoPago === 'efectivo' && body.productos) {
+            for (const item of body.productos) {
                 if (item.productoId) {
                     await Product.findByIdAndUpdate(item.productoId, { $inc: { existencias: -Number(item.cantidad) } });
                 }
@@ -41,7 +51,7 @@ router.post('/', async (req, res) => {
         const productosTexto = savedOrder.productos
             .map(p => `  • ${p.nombre} x${p.cantidad}`)
             .join('\n');
-        const msg = `🍭 *Nuevo Pedido - Dulce Mundo*\n\n👤 Cliente: ${savedOrder.usuario}\n📞 Tel: ${savedOrder.telefono || 'Sin número'}\n\n🛍️ Productos:\n${productosTexto}\n\n💰 Total: $${Number(savedOrder.total).toFixed(2)}\n💳 Pago: ${savedOrder.metodoPago === 'mercadopago' ? 'Mercado Pago' : 'Efectivo'}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
+        const msg = `🍭 *Nuevo Pedido - Dulce Mundo*\n\n👤 Cliente: ${savedOrder.usuario}\n📞 Tel: ${savedOrder.telefono || 'Sin número'}\n\n🛍️ Productos:\n${productosTexto}\n\n💰 Total: $${savedOrder.total.toFixed(2)}\n💳 Pago: ${savedOrder.metodoPago === 'mercadopago' ? 'Mercado Pago' : 'Efectivo'}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
         await notificarAdmin(msg);
 
         res.status(201).json(savedOrder);
@@ -60,7 +70,6 @@ router.get('/', async (req, res) => {
 });
 
 // 3. Estadísticas de ventas por producto (GET /api/orders/stats)
-// ⚠️ DEBE ir antes de /:id
 router.get('/stats', async (req, res) => {
     try {
         const orders = await Order.find().lean();
@@ -157,8 +166,7 @@ router.post('/webhook', async (req, res) => {
                         await session.commitTransaction();
                         console.log(`✅ Pedido ${orderId} procesado`);
 
-                        // Notificar al admin que el pago de MP fue aprobado
-                        const msg = `✅ *Pago Aprobado - Mercado Pago*\n\n👤 Cliente: ${order.usuario}\n💰 Total: $${Number(order.total).toFixed(2)}\n🆔 Payment ID: ${paymentId}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
+                        const msg = `✅ *Pago Aprobado - Mercado Pago*\n\n👤 Cliente: ${order.usuario}\n💰 Total: $${order.total.toFixed(2)}\n🆔 Payment ID: ${paymentId}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
                         await notificarAdmin(msg);
                     }
                 } catch (e) {
@@ -172,7 +180,6 @@ router.post('/webhook', async (req, res) => {
 });
 
 // 7. Pedidos de un cliente (GET /api/orders/mis-pedidos?usuario=Nombre)
-// ⚠️ DEBE ir antes de /:id
 router.get('/mis-pedidos', async (req, res) => {
     try {
         const { usuario } = req.query;
@@ -191,7 +198,6 @@ router.patch('/:id/status', async (req, res) => {
         const { nuevoEstado } = req.body;
         await Order.findByIdAndUpdate(req.params.id, { estado: nuevoEstado });
 
-        // Notificar al admin del cambio de estado
         const pedido = await Order.findById(req.params.id);
         const estadoEmoji = {
             pendiente: '⏳',
@@ -199,11 +205,11 @@ router.patch('/:id/status', async (req, res) => {
             entregado: '📦'
         };
         const emoji = estadoEmoji[nuevoEstado] || '🔄';
-        const msg = `${emoji} *Pedido Actualizado - Dulce Mundo*\n\n👤 Cliente: ${pedido.usuario}\n📞 Tel: ${pedido.telefono || 'Sin número'}\n🔄 Estado: ${nuevoEstado.toUpperCase()}\n💰 Total: $${Number(pedido.total).toFixed(2)}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
+        const msg = `${emoji} *Pedido Actualizado - Dulce Mundo*\n\n👤 Cliente: ${pedido.usuario}\n📞 Tel: ${pedido.telefono || 'Sin número'}\n🔄 Estado: ${nuevoEstado.toUpperCase()}\n💰 Total: $${pedido.total.toFixed(2)}\n🕐 ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
         await notificarAdmin(msg);
 
         res.json({ message: "Estado actualizado" });
     } catch (error) { res.status(500).json(error); }
 });
 
-module.exports = router; 
+module.exports = router;
