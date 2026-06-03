@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
             'Productos:',
             productosTexto,
             '',
-            `Total: $${totalTexto}`,
+            'Total: ' + totalTexto + ' pesos',
             `Pago: ${metodo}`,
             `Hora: ${hora}`
         ].join('\n');
@@ -187,7 +187,7 @@ router.post('/webhook', async (req, res) => {
                             '✅ Pago Aprobado - Mercado Pago',
                             '',
                             `Cliente: ${order.usuario}`,
-                            `Total: $${order.total.toFixed(2)}`,
+                            'Total: ' + order.total.toFixed(2) + ' pesos',
                             `Payment ID: ${paymentId}`,
                             `Hora: ${hora}`
                         ].join('\n');
@@ -231,7 +231,7 @@ router.patch('/:id/status', async (req, res) => {
             `Cliente: ${pedido.usuario}`,
             `Tel: ${pedido.telefono || 'Sin numero'}`,
             `Estado: ${nuevoEstado.toUpperCase()}`,
-            `Total: $${pedido.total.toFixed(2)}`,
+            'Total: ' + pedido.total.toFixed(2) + ' pesos',
             `Hora: ${hora}`
         ].join('\n');
         await notificarAdmin(msg);
