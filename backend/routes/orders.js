@@ -22,6 +22,22 @@ const notificarAdmin = async (mensaje) => {
     }
 };
 
+// ─── HELPER: Notificar al cliente por WhatsApp ────────────────────────────
+const notificarCliente = async (telefono, mensaje) => {
+    try {
+        if (!telefono || telefono === 'Sin numero') return;
+        const apikey = process.env.CALLMEBOT_APIKEY;
+        // Aseguramos formato internacional México
+        const phone = telefono.replace(/\D/g, ''); // solo dígitos
+        const phoneIntl = phone.startsWith('52') ? phone : '52' + phone;
+        const url = `https://api.callmebot.com/whatsapp.php?phone=${phoneIntl}&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;
+        await fetch(url);
+        console.log("📱 WhatsApp enviado al cliente");
+    } catch (err) {
+        console.error("❌ Error notificación cliente:", err);
+    }
+};
+
 // 1. Crear pedido (POST /api/orders)
 router.post('/', async (req, res) => {
     try {
@@ -235,6 +251,25 @@ router.patch('/:id/status', async (req, res) => {
             `Hora: ${hora}`
         ].join('\n');
         await notificarAdmin(msg);
+
+        // Notificar al cliente
+        const estadoMensaje = {
+            pagado: 'Tu pago ha sido confirmado',
+            entregado: 'Tu pedido ha sido entregado. Gracias por tu compra'
+        };
+        if (estadoMensaje[nuevoEstado]) {
+            const msgCliente = [
+                'Dulce Mundo - Actualizacion de pedido',
+                '',
+                `Hola ${pedido.usuario},`,
+                estadoMensaje[nuevoEstado] + '.',
+                '',
+                'Total: ' + pedido.total.toFixed(2) + ' pesos',
+                `Hora: ${hora}`
+            ].join('\n');
+            await notificarCliente(pedido.telefono, msgCliente);
+        }
+
         res.json({ message: "Estado actualizado" });
     } catch (error) { res.status(500).json(error); }
 });
